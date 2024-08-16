@@ -26,6 +26,12 @@ class ProjectMrpBomLine(models.Model):
                                      index=True,
                                      ondelete='cascade',
                                      required=True)
+    display_type = fields.Selection(
+        selection=[
+            ('line_operation', "Operation"),
+            ('line_note', "Note"),
+        ],
+        default=False)
     company_id = fields.Many2one('res.company',
                                  related='project_bom_id.company_id',
                                  store=True)
@@ -47,7 +53,7 @@ class ProjectMrpBomLine(models.Model):
         required=True,
         help="Unit of Measure (Unit of Measure) is the unit of measurement for the inventory control",
         domain="[('category_id', '=', project_product_uom_category_id)]")
-
+    name = fields.Char('Description')
     project_product_qty = fields.Float('Quantity', default=1.0, digits='Product Unit of Measure', required=True)
     project_operation_id = fields.Many2one('mrp.routing.workcenter',
                                            'Consumed in Operation',

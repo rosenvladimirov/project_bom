@@ -46,7 +46,7 @@ class ProjectMrpBom(models.Model):
                                     required=True)
     forecast_product_qty = fields.Float('Forcast Quantity', default=1.0)
     product_uom_id = fields.Many2one('uom.uom', 'Product Unit of Measure',
-                                     default=_get_default_product_uom_id, oldname='product_uom', required=True,
+                                     default=_get_default_product_uom_id, required=True,
                                      help="Unit of Measure (Unit of Measure) is the unit of measurement for the "
                                           "inventory control")
     company_id = fields.Many2one('res.company', 'Company',

@@ -9,11 +9,6 @@
                 <form string="Bill of Material">
                     <sheet>
                         <div class="oe_button_box" name="button_box">
-<!--                            <button name="toggle_active" type="object"-->
-<!--                                    class="oe_stat_button" icon="fa-archive">-->
-<!--                                <field name="active" widget="boolean_button"-->
-<!--                                    options='{"terminology": "archive"}'/>-->
-<!--                            </button>-->
                             <button name="action_sort"
                                 icon="fa-sort-numeric-asc"
                                 class="oe_stat_button"
@@ -35,6 +30,9 @@
                                 string="Store cost price"
                                 type="object"/>
                         </div>
+                        <widget name="web_ribbon" title="Archived" bg_color="text-bg-danger" invisible="active"/>
+                        <field name="id" invisible="True"/>
+                        <field name="active" invisible="True"/>
                         <group>
                             <group>
                                 <field name="product_tmpl_id" context="{'default_type': 'product'}"/>
@@ -53,7 +51,7 @@
                                 <field name="code"/>
                                 <field name="version" data-inputmask="'mask': '99.99'"/>
 <!--                                <field name="bom_ids" readonly="1" widget="many2many_tags" options="{'open_view': True}"/>-->
-                                <field name="company_id" groups="base.group_multi_company" options="{'no_create': True}"/>
+                                <field name="company_id" options="{'no_create': True}"/>
                                 <field name="sale_order_ids" widget="many2many_tags" placeholder="Use to calculate forecast quantity" domain="[('order_line.product_id', '=', product_id)]"/>
                                 <field name="currency_id" invisible="1"/>
                                 <field name="last_update_qty" readonly="1" force_save="1"/>
@@ -62,37 +60,70 @@
                         </group>
                         <notebook>
                             <page string="Technical data">
-                                <field name="project_bom_line_ids">
-                                    <tree string="Components" editable="top" limit="300">
-                                        <field name="company_id" invisible="1"/>
-                                        <field name="allowed_operation_ids" invisible="1"/>
-                                        <field name="project_bom_id" invisible="1"/>
+                                <field name="project_bom_line_ids"
+                                       widget="section_and_note_one2many"
+                                       mode="tree,kanban">
+                                    <form string="Project for Bill of Material line">
+                                        <field name="display_type" invisible="1"/>
+                                        <group>
+                                            <group string="Product">
+                                                <field name="bom_line_id" invisible="1"/>
+                                                <field name="sequence"/>
+                                                <field name="company_id"/>
+                                                <field name="project_product_id"/>
+                                                <field name="project_product_uom_category_id"/>
+                                                <div class="o_row">
+                                                    <field name="project_product_qty"/>
+                                                    <field name="project_product_uom_id"
+                                                           options="{'no_open':True,'no_create':True}"
+                                                           groups="uom.group_uom"/>
+                                                </div>
+                                            </group>
+                                            <field name="version_ids"/>
+                                        </group>
+                                    </form>
+                                    <tree string="Component lines" editable="bottom" limit="200">
+                                        <control>
+                                            <create name="add_product_control" string="Add a product"/>
+                                            <create name="add_operation_control" string="Add a operation" context="{'default_display_type': 'line_operation'}"/>
+                                            <create name="add_note_control" string="Add a note" context="{'default_display_type': 'line_note'}"/>
+                                        </control>
                                         <field name="sequence" widget="handle"/>
-                                        <field name="project_product_id"/>
-                                        <field name="project_bom_id"/>
-                                        <field name="project_operation_id"/>
+
+                                        <field name="display_type" column_invisible="True"/>
+                                        <field name="bom_line_id" column_invisible="True"/>
+
+                                        <field name="project_product_id"
+                                               readonly="id"
+                                               required="not display_type"
+                                               force_save="1"
+                                               widget="many2one_barcode"
+                                               options="{'no_open': True}"
+                                        />
+                                        <field name="name" widget="section_and_note_text" optional="show"/>
+                                        <field name="project_product_uom_category_id" invisible="1"/>
                                         <field name="project_product_qty"/>
-                                        <field name="approve"/>
-<!--                                        <button name="operation_bom_line" icon="fa-sliders" type="object"/>-->
-<!--                                        <button name="get_price" icon="fa-usd" type="object"/>-->
-<!--                                        <field name="currency_id" invisible="1"/>-->
+                                        <field name="project_product_uom_id"
+                                               force_save="1"
+                                               string="UoM"
+                                               context="{'company_id': parent.company_id}"
+                                               groups="uom.group_uom"
+                                               required="not display_type"
+                                               options='{"no_open": True}'
+                                               optional="show"/>
+                                        <field name="project_operation_id"
+                                               force_save="1"
+                                               groups="mrp.group_mrp_routings"
+                                               required="display_type == 'line_operation'"/>
+                                        <field name="company_id"/>
+                                        <field name="allowed_operation_ids" column_invisible="True"/>
                                     </tree>
                                 </field>
                                 <field name="note" class="oe_inline" placeholder="Write description ..."/>
                                 <div class="oe_clear"/>
                             </page>
                             <page string="Grouped data">
-                                <field name="project_bom_group_ids">
-                                    <tree string="Products" editable="top" limit="300">
-                                        <field name="product_type_id" readonly="1"/>
-                                        <field name="project_bom_id" invisible="1"/>
-                                        <field name="product_tmpl_id" readonly="1"/>
-                                        <field name="product_uom_id" readonly="1"/>
-                                        <field name="price_unit" readonly="1"/>
-                                        <field name="avg_price_unit"/>
-                                        <field name="attribute_value_ids" readonly="1"/>
-                                    </tree>
-                                </field>
+                                <field name="project_bom_group_ids"/>
                                 <group class="oe_subtotal_footer oe_right">
                                     <field name="amount_untaxed"
                                            widget="monetary"
@@ -170,7 +201,7 @@
                     <field name="project_bom_line_ids" string="Components"/>
                     <field name="product_tmpl_id" string="Product"/>
                     <field name="task_id" string="Project Task"/>
-                    <field name="company_id" groups="base.group_multi_company"/>
+                    <field name="company_id"/>
                     <filter string="Archived" name="inactive" domain="[('active','=',False)]"/>
                     <separator/>
                     <group expand="0" string="Group By...">

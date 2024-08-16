@@ -7,22 +7,25 @@
             <field name="model">project.mrp.bom.line</field>
             <field name="arch" type="xml">
                 <form string="Project for Bill of Material line">
-                    <group>
-                        <group string="Product">
-                            <field name="bom_line_id" invisible="1"/>
-                            <field name="sequence"/>
-                            <field name="company_id" groups="base.group_multi_company"/>
-                            <field name="project_product_id"/>
-                            <field name="project_product_uom_category_id"/>
-                            <div class="o_row">
-                                <field name="project_product_qty"/>
-                                <field name="project_product_uom_id"
-                                       options="{'no_open':True,'no_create':True}"
-                                       groups="uom.group_uom"/>
-                            </div>
+                    <field name="display_type" invisible="1"/>
+                    <sheet>
+                        <group>
+                            <group string="Product">
+                                <field name="bom_line_id" invisible="1"/>
+                                <field name="sequence"/>
+                                <field name="company_id" groups="base.group_multi_company"/>
+                                <field name="project_product_id"/>
+                                <field name="project_product_uom_category_id"/>
+                                <div class="o_row">
+                                    <field name="project_product_qty"/>
+                                    <field name="project_product_uom_id"
+                                           options="{'no_open':True,'no_create':True}"
+                                           groups="uom.group_uom"/>
+                                </div>
+                            </group>
+                            <field name="version_ids"/>
                         </group>
-                        <field name="version_ids"/>
-                    </group>
+                    </sheet>
                 </form>
             </field>
         </record>
@@ -32,13 +35,25 @@
             <field name="model">project.mrp.bom.line</field>
             <field name="arch" type="xml">
                 <tree string="Components" editable="top">
-                    <field name="bom_line_id" invisible="1"/>
+                    <field name="bom_line_id" column_invisible="True"/>
                     <field name="sequence" widget="handle"/>
                     <field name="company_id" groups="base.group_multi_company"/>
-                    <field name="project_product_id"/>
+                    <field name="project_product_id"
+                           readonly="id"
+                           required="not display_type"
+                           force_save="1"/>
                     <field name="project_product_uom_category_id" invisible="1"/>
                     <field name="project_product_qty"/>
-                    <field name="project_product_uom_id"/>
+                    <field name="project_product_uom_id"
+                           force_save="1"
+                           groups="uom.group_uom"
+                           required="not display_type"/>
+                    <field name="project_operation_id"
+                           force_save="1"
+                           groups="mrp.group_mrp_routings"
+                           required="display_type == 'line_operation'"/>
+                    <field name="display_type" column_invisible="1"/>
+                    <field name="allowed_operation_ids" column_invisible="True"/>
                 </tree>
             </field>
         </record>

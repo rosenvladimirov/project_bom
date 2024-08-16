@@ -99,8 +99,9 @@ class ProjectMrpBomGroup(models.Model):
     currency_id = fields.Many2one('res.currency', 'Currency', related='project_bom_id.company_id.currency_id')
 
     # bom_line_ids = fields.Many2many('mrp.bom.line', string='Bom Line')
-    operation_ids = fields.One2many('project.mrp.bom.operation', 'project_bom_line_id', string='Operations',
-                                    ondelete='cascade')
+    operation_ids = fields.One2many('project.mrp.bom.operation',
+                                    'project_bom_line_id',
+                                    string='Operations')
     # ready_for_bom = fields.Boolean('Ready to use in BOM')
     # copy_from_bom_id = fields.Many2one('mrp.bom', 'Copy from BOM', related='project_bom_id.bom_id.copy_from_bom_id')
     description = fields.Char('Description', translate=True)
