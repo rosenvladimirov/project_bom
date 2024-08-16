@@ -64,6 +64,8 @@
                             <page string="Technical data">
                                 <field name="project_bom_line_ids">
                                     <tree string="Components" editable="top" limit="300">
+                                        <field name="company_id" invisible="1"/>
+                                        <field name="allowed_operation_ids" invisible="1"/>
                                         <field name="project_bom_id" invisible="1"/>
                                         <field name="sequence" widget="handle"/>
                                         <field name="project_product_id"/>
