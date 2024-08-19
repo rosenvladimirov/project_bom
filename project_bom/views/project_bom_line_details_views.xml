@@ -67,15 +67,16 @@
         </record>
 
         <record id="action_project_bom_line_details" model="ir.actions.act_window">
-            <field name="name">Project Bom Line Details</field>
+            <field name="name">Project Bill of Materials - Line Details</field>
             <field name="res_model">project.bom.line.details</field>
             <field name="view_mode">tree,form</field>
             <field name="view_id" ref="project_bom.view_project_bom_line_details_tree"/>
         </record>
 
         <menuitem id="menu_project_bom_line_details"
-                  name="Line details"
+                  name="Component Line details"
                   parent="project_bom.menu_project_mrp_bom_menu"
-                  action="project_bom.action_project_bom_line_details"/>
+                  action="project_bom.action_project_bom_line_details"
+                  sequence="2"/>
     </data>
 </odoo>

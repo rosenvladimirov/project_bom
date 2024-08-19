@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <menuitem id="menu_project_mrp_bom_menu"
+                  name="Project Bill of Materials"
+                  parent="mrp.menu_mrp_bom"
+                  sequence="99"/>
+    </data>
+</odoo>

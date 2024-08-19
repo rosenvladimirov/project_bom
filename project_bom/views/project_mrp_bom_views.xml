@@ -208,7 +208,7 @@
         </record>
 
         <record id="project_mrp_bom_form_action" model="ir.actions.act_window">
-            <field name="name">Project - Bills of Materials</field>
+            <field name="name">Bills of Materials</field>
             <field name="type">ir.actions.act_window</field>
             <field name="res_model">project.mrp.bom</field>
             <field name="domain">[]</field>
@@ -228,18 +228,11 @@
             </field>
         </record>
 
-        <menuitem id="menu_project_mrp_bom_menu"
-                  name="BOM"
-                  parent="project.menu_main_pm"
-                  sequence="3"/>
         <menuitem id="menu_project_mrp_bom_form_action"
-            action="project_mrp_bom_form_action"
-            parent="project_bom.menu_project_mrp_bom_menu"
-            sequence="1"/>
-        <menuitem id="menu_sale_project_mrp_bom_form_action"
-            action="project_mrp_bom_form_action"
-            parent="sale.product_menu_catalog"
-            sequence="2"/>
+                  name="Bill of Materials"
+                  action="project_mrp_bom_form_action"
+                  parent="project_bom.menu_project_mrp_bom_menu"
+                  sequence="1"/>
 
         <record id="template_project_open_bom" model="ir.actions.act_window">
             <field name="context">{'default_product_tmpl_id': active_id, 'search_default_product_tmpl_id': active_id}</field>

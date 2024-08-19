@@ -11,7 +11,7 @@ class ProjectBomLineDetails(models.Model):
     designator = fields.Char(string='Designator')
     product_id =  fields.Many2one('product.product', string='Product')
     default_code = fields.Char(string='Internal reference', related='product_id.default_code', store=True)
-    description = fields.Text(string='Description', related='product_id.display_name', store=True)
+    description = fields.Char(string='Description', related='product_id.display_name', store=True)
     sequence = fields.Integer(string='Sequence')
     type = fields.Selection([
         ('bom', 'BOM'),

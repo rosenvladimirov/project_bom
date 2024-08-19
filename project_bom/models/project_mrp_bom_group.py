@@ -97,13 +97,6 @@ class ProjectMrpBomGroup(models.Model):
     price_subtotal = fields.Monetary(compute='_compute_amount', string='Subtotal', store=True)
     direct_price_subtotal = fields.Monetary(compute='_compute_amount', string='Subtotal', store=True)
     currency_id = fields.Many2one('res.currency', 'Currency', related='project_bom_id.company_id.currency_id')
-
-    # bom_line_ids = fields.Many2many('mrp.bom.line', string='Bom Line')
-    operation_ids = fields.One2many('project.mrp.bom.operation',
-                                    'project_bom_line_id',
-                                    string='Operations')
-    # ready_for_bom = fields.Boolean('Ready to use in BOM')
-    # copy_from_bom_id = fields.Many2one('mrp.bom', 'Copy from BOM', related='project_bom_id.bom_id.copy_from_bom_id')
     description = fields.Char('Description', translate=True)
     editable = fields.Boolean('Editable')
     qty_available = fields.Float('Quantity On Hand', compute='_compute_qty_available')
@@ -147,20 +140,17 @@ class ProjectMrpBomGroup(models.Model):
         avg_qty_invoiced_sum = avg_qty_invoiced_sum != 0.0 and avg_qty_invoiced_sum or 1.0
         return avg_price_unit_sum / avg_qty_invoiced_sum
 
-    @api.depends('operation_ids')
+    @api.depends('project_bom_id')
     def _compute_qty_available(self):
         for record in self:
-            record.qty_available = sum([x.purchased_product_qty for x in record.operation_ids.mapped('product_id')])
+            project_bom_line_ids = record.project_bom_id.mapped('project_bom_line_ids')
+            record.qty_available = sum([x.purchased_product_qty for x in project_bom_line_ids.mapped('product_id')])
 
-    @api.depends('operation_ids')
+    @api.depends('project_bom_id')
     def _compute_virtual_available(self):
         for record in self:
-            record.virtual_available = sum([x.purchased_product_qty for x in record.operation_ids.mapped('product_id')])
-
-    @api.onchange('operation_ids')
-    def onchange_operation_ids(self):
-        if self.operation_ids:
-            self.product_qty = sum([x.product_qty for x in self.operation_ids])
+            project_bom_line_ids = record.project_bom_id.mapped('project_bom_line_ids')
+            record.virtual_available = sum([x.purchased_product_qty for x in project_bom_line_ids.mapped('product_id')])
 
     @api.onchange('product_uom_id')
     def onchange_product_uom_id(self):
@@ -298,21 +288,6 @@ class ProjectMrpBomGroup(models.Model):
     #             })
     #             return action
 
-    def operation_bom_line(self):
-        for record in self:
-            action = self.env.ref('project_bom.project_mrp_bom_operation_form_action')
-            action = action.read()[0]
-            action.update({
-                'context': {
-                    'default_product_tmpl_id': record.product_tmpl_id.id,
-                    'default_project_bom_line_id': record.id,
-                    'default_product_uom_id': record.product_uom_id.id,
-                    'default_project_bom_id': record.project_bom_id.id,
-                    'use_project_bom': True,
-                },
-                'domain': [('id', 'in', record.operation_ids.ids)],
-            })
-            return action
 
     def get_price(self):
         line_ids = self.env['project.mrp.bom.line']
@@ -321,16 +296,3 @@ class ProjectMrpBomGroup(models.Model):
             line_ids |= record
         action['active_ids'] = line_ids.ids
         return action
-
-    @api.model_create_multi
-    def create(self, values):
-        for vals in values:
-            if 'product_id' in vals and 'product_uom_id' not in vals:
-                vals['product_uom_id'] = self.env['product.product'].browse(vals['product_id']).uom_id.id
-        return super(ProjectMrpBomLine, self).create(values)
-
-    def unlink(self):
-        for record in self:
-            for operation in record.mapped('operation_ids'):
-                operation.unlink()
-        return super(ProjectMrpBomLine, self).unlink()

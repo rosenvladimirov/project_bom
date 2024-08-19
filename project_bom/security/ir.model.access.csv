@@ -3,7 +3,11 @@ access_project_mrp_bom_mrp_user,project.mrp.bom user,model_project_mrp_bom,proje
 access_project_mrp_bom_mrp_manager,project.mrp.bom manager,model_project_mrp_bom,project.group_project_manager,1,1,1,1
 access_project_mrp_bom_line_mrp_user,project.mrp.bom.line user,model_project_mrp_bom_line,project.group_project_user,1,0,0,0
 access_project_mrp_bom_mrp_line_manager,project.mrp.bom.line manager,model_project_mrp_bom_line,project.group_project_manager,1,1,1,1
-access_project_mrp_bom_operation_mrp_user,project.mrp.bom.operation user,model_project_mrp_bom_operation,project.group_project_user,1,0,0,0
-access_project_mrp_bom_operation_manager,project.mrp.bom.operation manager,model_project_mrp_bom_operation,project.group_project_manager,1,1,1,1
+access_project_mrp_bom_group_mrp_user,project.mrp.bom.group user,model_project_mrp_bom_group,project.group_project_user,1,0,0,0
+access_project_mrp_bom_group_manager,project.project.mrp.bom.group manager,model_project_mrp_bom_group,project.group_project_manager,1,1,1,1
+access_project_mrp_bom_line_version_mrp_user,project.mrp.bom.line.version user,model_project_mrp_bom_line_version,project.group_project_user,1,0,0,0
+access_project_mrp_bom_line_version_manager,project.mrp.bom.line.version manager,model_project_mrp_bom_line_version,project.group_project_manager,1,1,1,1
+access_project_bom_line_details_mrp_user,project.bom.line.details user,model_project_bom_line_details,project.group_project_user,1,0,0,0
+access_project_bom_line_details_manager,project.bom.line.details manager,model_project_bom_line_details,project.group_project_manager,1,1,1,1
 access_project_product_types_mrp_user,project.product.types user,model_project_product_types,project.group_project_user,1,0,0,0
 access_project_product_types_manager,project.product.types manager,model_project_product_types,project.group_project_manager,1,1,1,1
