@@ -1,0 +1,81 @@
+<odoo>
+    <data>
+        <record id="view_project_bom_line_details_tree" model="ir.ui.view">
+            <field name="name">project.bom.line.details.tree</field>
+            <field name="model">project.bom.line.details</field>
+            <field name="arch" type="xml">
+                <tree string="Project Europlacer">
+                    <field name="designator"/>
+                    <field name="default_code"/>
+                    <field name="description"/>
+                    <field name="used_in_product"/>
+                    <field name="used_in_operation"/>
+                    <field name="product_variant"/>
+                    <field name="hw_option"/>
+                    <field name="x_coordinate"/>
+                    <field name="y_coordinate"/>
+                    <field name="theta"/>
+                    <field name="pattern_reference"/>
+                    <field name="pattern_call"/>
+                    <field name="fiducial_mark"/>
+                    <field name="rejection_mark"/>
+                    <field name="component_test"/>
+                    <field name="optimization_mode"/>
+                    <field name="auto_adaptive_sequencing"/>
+                    <field name="stacking_board_number"/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="view_project_bom_line_details_form" model="ir.ui.view">
+            <field name="name">project.bom.line.details.form</field>
+            <field name="model">project.bom.line.details</field>
+            <field name="arch" type="xml">
+                <form string="Project Europlacer">
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name="designator"/>
+                                <field name="default_code"/>
+                                <field name="description"/>
+                                <field name="used_in_product"/>
+                                <field name="used_in_operation"/>
+                                <field name="product_variant"/>
+                                <field name="hw_option"/>
+                            </group>
+                            <group>
+                                <field name="x_coordinate"/>
+                                <field name="y_coordinate"/>
+                                <field name="theta"/>
+                                <field name="pattern_reference"/>
+                                <field name="pattern_call"/>
+                                <field name="fiducial_mark"/>
+                                <field name="rejection_mark"/>
+                            </group>
+                        </group>
+                        <group>
+                            <group>
+                                <field name="component_test"/>
+                                <field name="optimization_mode"/>
+                                <field name="auto_adaptive_sequencing"/>
+                                <field name="stacking_board_number"/>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_project_bom_line_details" model="ir.actions.act_window">
+            <field name="name">Project Bom Line Details</field>
+            <field name="res_model">project.bom.line.details</field>
+            <field name="view_mode">tree,form</field>
+            <field name="view_id" ref="project_bom.view_project_bom_line_details_tree"/>
+        </record>
+
+        <menuitem id="menu_project_bom_line_details"
+                  name="Line details"
+                  parent="project_bom.menu_project_mrp_bom_menu"
+                  action="project_bom.action_project_bom_line_details"/>
+    </data>
+</odoo>

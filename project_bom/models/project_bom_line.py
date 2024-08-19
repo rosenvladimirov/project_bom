@@ -20,6 +20,7 @@ class ProjectMrpBomLine(models.Model):
 
     sequence = fields.Integer('Sequence',
                               default=1,
+                              copy=False,
                               help="Gives the sequence order when displaying.")
     project_bom_id = fields.Many2one('project.mrp.bom',
                                      'Parent Project BOM',
@@ -38,10 +39,12 @@ class ProjectMrpBomLine(models.Model):
     bom_line_id = fields.Many2one('mrp.bom.line',
                                   'BOM Line',
                                   required=True,
-                                  ondelete='restrict')
+                                  ondelete='restrict',
+                                  copy=False)
     version_ids = fields.One2many('project.mrp.bom.line.version',
                                  'bom_line_id',
-                                 'Versions')
+                                 'Versions',
+                                  copy=False)
     project_product_id = fields.Many2one('product.product',
                                          'Component',
                                          required=True,
@@ -53,7 +56,11 @@ class ProjectMrpBomLine(models.Model):
         required=True,
         help="Unit of Measure (Unit of Measure) is the unit of measurement for the inventory control",
         domain="[('category_id', '=', project_product_uom_category_id)]")
-    name = fields.Char('Description')
+    name = fields.Char('Description', related="project_operation_id.name", readonly=False, store=True)
+
+    workcenter_id = fields.Many2one('mrp.workcenter', 'Work Center')
+    allowed_operation_ids = fields.Many2many('mrp.routing.workcenter', compute="_compute_allowed_operation_ids")
+
     project_product_qty = fields.Float('Quantity', default=1.0, digits='Product Unit of Measure', required=True)
     project_operation_id = fields.Many2one('mrp.routing.workcenter',
                                            'Consumed in Operation',
@@ -62,6 +69,13 @@ class ProjectMrpBomLine(models.Model):
                                            help="The operation where the components are consumed, "
                                                 "or the finished products created.")
     approve = fields.Boolean('Approved')
+
+    @api.depends('workcenter_id')
+    def _compute_allowed_operation_ids(self):
+        for record in self:
+            record.allowed_operation_ids = self.env['mrp.routing.workcenter'].search([
+                ('workcenter_id', '=', record.workcenter_id.id)
+            ])
 
     def action_approve(self, product_id):
         for record in self:
@@ -72,17 +86,40 @@ class ProjectMrpBomLine(models.Model):
                 ('bom_line_id', '=', record.id), ('version', '=', project_bom_id.version)
             ])
             if record.approve:
-                record.bom_line_id.product_id = record.project_product_id
-                record.bom_line_id.product_uom_id = record.project_product_uom_id
-                record.bom_line_id.product_qty = record.project_product_qty
-                if not version:
-                    record.version_ids.create({
-                        'bom_line_id': record.id,
-                        'version': project_bom_id.version,
-                        'product_id': record.project_product_id.id,
-                        'product_uom_id': record.project_product_uom_id.id,
-                        'product_qty': record.project_product_qty,
-                    })
+                if record.project_product_id.id != product_id:
+                    change_product_id = record.project_bom_id.project_bom_line_ids.\
+                        filtered(lambda r: r.project_product_id == record.project_product_id
+                                           and r.project_operation_id == record.project_operation_id)
+                    if change_product_id:
+                        change_product_id.project_product_qty = record.project_product_qty
+                    else:
+                        bom_id = record.bom_line_id.bom_id
+                        change_bom_product_id = bom_id.bom_line_ids.\
+                            filtered(lambda r: r.product_id == record.project_product_id)
+                        if not change_bom_product_id:
+                            change_bom_product_id = self.env['project.mrp.bom.line'].create({
+                                'bom_id': bom_id.id,
+                                'product_id': record.project_product_id.id,
+                                'product_uom_id': record.project_product_uom_id.id,
+                                'product_qty': record.project_product_qty,
+                            })
+                            bom_id.bom_line_ids |= change_bom_product_id
+                        record.project_bom_id.project_bom_line_ids |= record.copy(default={
+                            'project_bom_id': record.project_bom_id.id,
+                            'bom_line_id': change_bom_product_id.id,
+                        })
+                else:
+                    record.bom_line_id.product_id = record.project_product_id
+                    record.bom_line_id.product_uom_id = record.project_product_uom_id
+                    record.bom_line_id.product_qty = record.project_product_qty
+                    if not version:
+                        record.version_ids.create({
+                            'bom_line_id': record.id,
+                            'version': project_bom_id.version,
+                            'product_id': record.project_product_id.id,
+                            'product_uom_id': record.project_product_uom_id.id,
+                            'product_qty': record.project_product_qty,
+                        })
             elif not record.approve and version:
                 record.bom_line_id.product_id = version.product_id
                 record.bom_line_id.product_uom_id = version.product_uom_id

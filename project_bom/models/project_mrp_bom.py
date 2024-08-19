@@ -50,7 +50,7 @@ class ProjectMrpBom(models.Model):
                                      help="Unit of Measure (Unit of Measure) is the unit of measurement for the "
                                           "inventory control")
     company_id = fields.Many2one('res.company', 'Company',
-                                 default=lambda self: self.env['res.company']._company_default_get('mrp.bom'),
+                                 default=lambda self: self.env.company,
                                  required=True)
     project_bom_line_ids = fields.One2many('project.mrp.bom.line',
                                            'project_bom_id',
@@ -253,22 +253,6 @@ class ProjectMrpBom(models.Model):
     #         record.action_version_control()
     #         record.bom_id.sequence = 9999
 
-    def operation_bom_line(self):
-        for record in self:
-            operation_ids = self.env['project.mrp.bom.operation']
-            for line in record.project_bom_line_ids:
-                operation_ids |= line.operation_ids
-            action = self.env.ref('project_bom.project_mrp_bom_operation_form_action')
-            action = action.read()[0]
-            action.update({
-                'context': {
-                    'default_project_bom_id': record.id,
-                    'use_project_bom': True,
-                },
-                'domain': [('id', 'in', operation_ids.ids)],
-            })
-            return action
-
     def material_bom_line(self):
         for record in self:
             line_ids = self.env['project.mrp.bom.line']
@@ -284,8 +268,8 @@ class ProjectMrpBom(models.Model):
             })
             return action
 
-    def unlink(self):
-        for record in self:
-            for operation in record.mapped('project_bom_line_ids').mapped('operation_ids'):
-                operation.unlink()
-        return super(ProjectMrpBom, self).unlink()
+    # def unlink(self):
+    #     for record in self:
+    #         for operation in record.mapped('project_bom_line_ids').mapped('operation_id'):
+    #             operation.unlink()
+    #     return super(ProjectMrpBom, self).unlink()

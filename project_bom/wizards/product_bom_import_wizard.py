@@ -74,12 +74,9 @@ class RemoteMultiCompanyProductImport(models.TransientModel):
                                     project_bom_line_id = self.env['project.mrp.bom.line'].create({
                                         'project_bom_id': record.project_bom_id.id,
                                         'product_tmpl_id': product_tmpl_id.id,
-                                        'product_type_id': product_type_id and product_type_id.id or product_type_id.id,
                                         'product_qty': product_component['product_qty'],
-                                        'price_unit': product_tmpl_id.standard_price,
-                                        'editable': True,
                                     })
-                                project_bom_line_id.operation_ids.create({
+                                project_bom_line_id.project_operation_id.create({
                                     'project_bom_line_id': project_bom_line_id.id,
                                     'project_bom_id': record.project_bom_id.id,
                                     'product_tmpl_id': product_tmpl_id.id,
