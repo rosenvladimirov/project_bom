@@ -20,8 +20,19 @@ class ProjectBomLineDetails(models.Model):
                                           required=True)
 
     sequence = fields.Integer(string='Sequence', default=10)
-    final_product_tmpl_id = fields.Many2one('product.template', string='Final Product Template')
-    final_product_id = fields.Many2one('product.product', string='Final Product')
+    final_product_tmpl_id = fields.Many2one('product.template',
+                                            string='Final Product Template',
+                                            related='project_bom_id.product_tmpl_id')
+    final_product_id = fields.Many2one('product.product',
+                                       string='Final Product',
+                                       related='project_bom_id.product_id',
+                                       )
+    possible_bom_product_template_attribute_value_ids = fields.Many2many(
+        related='project_bom_id.possible_product_template_attribute_value_ids')
+    bom_product_template_attribute_value_ids = fields.Many2many(
+        'product.template.attribute.value', string="Apply on Variants", ondelete='restrict',
+        domain="[('id', 'in', possible_bom_product_template_attribute_value_ids)]",
+        help="BOM Product Variants needed to apply this line.")
 
     designator = fields.Char(string='Designator')
     product_id =  fields.Many2one('product.product', string='Component')
