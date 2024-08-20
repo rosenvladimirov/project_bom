@@ -35,7 +35,12 @@ class ProjectBomLineDetails(models.Model):
         help="BOM Product Variants needed to apply this line.")
 
     designator = fields.Char(string='Designator')
-    product_id =  fields.Many2one('product.product', string='Component')
+    product_id =  fields.Many2one('product.product', string='Component',
+                                  help='Used component for Project BOM, '
+                                       'if use HW option please discard this product.')
+    hw_option = fields.Many2one('product.product', string='HW Option',
+                                help='Used kit for Project BOM, replacement of component.')
+
     default_code = fields.Char(string='Internal reference',
                                related='product_id.default_code',
                                store=True)
@@ -54,10 +59,7 @@ class ProjectBomLineDetails(models.Model):
         ('kit', 'Kit'),
     ], string='Type'
     )
-    used_in_product = fields.Char(string='Used in Product')
     used_in_operation = fields.Char(string='Used In Operation')
-    product_variant = fields.Many2one('product.product', string='Variant')
-    hw_option = fields.Char(string='HW Option')
 
     # Additional fields for EuroPlacer CAD compatibility
     x_coordinate = fields.Float(string='X Coordinate', related='product_id.x_coordinate', store=True)
