@@ -5,4 +5,5 @@ from . import project_mrp_bom_group
 from . import project_bom_line
 from . import project_bom_line_version
 from . import project_bom_line_details
+from . import product_product
 # from . import project_task

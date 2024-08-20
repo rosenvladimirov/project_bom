@@ -1,17 +1,23 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
+from email.policy import default
 
-from odoo import models, fields
+from odoo import models, fields, api
+from odoo.tools.populate import compute
 
 
 class ProjectBomLineDetails(models.Model):
     _name = 'project.bom.line.details'
     _description = 'Project BOM line details (CAD data file)'
 
+    sequence = fields.Integer(string='Sequence', default=10)
+
     designator = fields.Char(string='Designator')
-    product_id =  fields.Many2one('product.product', string='Product')
+    product_id = fields.Many2one('product.product', string='Product')
     default_code = fields.Char(string='Internal reference', related='product_id.default_code', store=True)
     description = fields.Char(string='Description', related='product_id.display_name', store=True)
+    short_description = fields.Char(string='Short Description')
+    domain_short_description = fields.Binary(default=[], compute="_compute_short_descriptions", string='Domain Short Description')
     sequence = fields.Integer(string='Sequence')
     type = fields.Selection([
         ('bom', 'BOM'),
@@ -46,3 +52,14 @@ class ProjectBomLineDetails(models.Model):
             if record.product_id:
                 record.default_code = record.product_id.default_code
                 record.description = record.product_id.display_name
+
+
+    @api.depends('short_description')
+    def _compute_short_descriptions(self):
+        for record in self:
+            if record.short_description:
+                found_products = (
+                    self.env['product.product'].search([('short_description', '=', record.short_description)]))
+
+                if found_products:
+                    record.domain_short_description = [('id', 'in', found_products.ids)]

@@ -4,10 +4,14 @@
             <field name="name">project.bom.line.details.tree</field>
             <field name="model">project.bom.line.details</field>
             <field name="arch" type="xml">
-                <tree string="Project Europlacer">
+                <tree string="Project Europlacer" editable="top">
+                    <field name="domain_short_description" column_invisible="1"/>
+                    <field name="sequence" widget="handle"/>
                     <field name="designator"/>
-                    <field name="default_code"/>
-                    <field name="description"/>
+                    <field name="short_description"/>
+                    <field name="default_code" readonly="0" force_save="1"/>
+                    <field name="description" readonly="0" force_save="1"/>
+                    <field name="product_id" domain="domain_short_description"/>
                     <field name="used_in_product"/>
                     <field name="used_in_operation"/>
                     <field name="product_variant"/>
