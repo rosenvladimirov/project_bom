@@ -64,6 +64,9 @@ class ProjectMrpBom(models.Model):
                                             'project_bom_id',
                                             'BoM Groups',
                                             copy=False)
+    project_bom_line_details_ids = fields.One2many('project.bom.line.details',
+                                                   'project_bom_line_id',
+                                                   'BoM Line Details')
     task_id = fields.Many2one('project.task', 'Project Task')
     account_analytic_id = fields.Many2one('account.analytic.account', 'Analytic account')
     price_unit_type = fields.Selection([
@@ -267,7 +270,7 @@ class ProjectMrpBom(models.Model):
     #         record.action_version_control()
     #         record.bom_id.sequence = 9999
 
-    def material_bom_line(self):
+    def action_material_bom_line(self):
         for record in self:
             line_ids = self.env['project.mrp.bom.line']
             for line in record.project_bom_line_ids:
@@ -279,6 +282,21 @@ class ProjectMrpBom(models.Model):
                     'default_project_bom_id': record.id,
                 },
                 'domain': [('id', 'in', line_ids.ids)],
+            })
+            return action
+
+    def action_material_bom_line_details(self):
+        for record in self:
+            detail_product_tmpl_id = self.env['project.bom.line.details'].search([
+                ('project_bom_id.product_tmpl_id', '=', record.product_tmpl_id.id)
+            ])
+            action = self.env.ref('project_bom.action_project_bom_line_details')
+            action = action.read()[0]
+            action.update({
+                'context': {
+                    'default_project_bom_id': record.id,
+                },
+                'domain': [('id', 'in', detail_product_tmpl_id.ids)],
             })
             return action
 

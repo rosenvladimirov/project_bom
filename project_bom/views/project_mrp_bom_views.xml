@@ -14,10 +14,15 @@
                                 class="oe_stat_button"
                                 string="Sorting"
                                 type="object"/>
-                            <button name="material_bom_line"
+                            <button name="action_material_bom_line"
                                 icon="fa-building-o"
                                 class="oe_stat_button"
-                                string="Bom from materials"
+                                string="Components"
+                                type="object" context="{'default_project_bom_id': active_id}"/>
+                            <button name="action_material_bom_line_details"
+                                icon="fa-cubes"
+                                class="oe_stat_button"
+                                string="Detail components"
                                 type="object" context="{'default_project_bom_id': active_id}"/>
                             <button name="store_standard_price"
                                 icon="fa-floppy-o"
@@ -116,6 +121,9 @@
                                 </field>
                                 <field name="note" class="oe_inline" placeholder="Write description ..."/>
                                 <div class="oe_clear"/>
+                            </page>
+                            <page string="Detailed line data">
+                                <field name="project_bom_line_details_ids" readonly="1"/>
                             </page>
                             <page string="Grouped data">
                                 <field name="project_bom_group_ids"/>
