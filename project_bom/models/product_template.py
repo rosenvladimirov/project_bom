@@ -36,6 +36,10 @@ class ProductTemplate(models.Model):
     project_bom_count = fields.Integer(
         '# Bill of Material',
         compute='_compute_project_bom_count')
+    # CAD additional information
+    short_description = fields.Char('Technical Description', maxsize=40)
+    x_coordinate = fields.Float(string='X Coordinate')
+    y_coordinate = fields.Float(string='Y Coordinate')
 
     def _compute_project_bom_count(self):
         read_group_res = self.env['project.mrp.bom'].read_group([('product_tmpl_id', 'in', self.ids)],

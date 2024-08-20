@@ -41,6 +41,10 @@ class ProjectMrpBom(models.Model):
     display_name = fields.Char('Display name', compute='_compute_display_name')
     product_id = fields.Many2one('product.product', 'Product')
     product_tmpl_id = fields.Many2one('product.template', 'Product Template', required=True)
+    possible_product_template_attribute_value_ids = fields.Many2many(
+        'product.template.attribute.value',
+        compute='_compute_possible_product_template_attribute_value_ids')
+
     product_qty = fields.Float('Quantity', default=1.0, required=True)
     bulk_product_qty = fields.Float('Bulk produce', default=1.0,
                                     required=True)
@@ -60,6 +64,9 @@ class ProjectMrpBom(models.Model):
                                             'project_bom_id',
                                             'BoM Groups',
                                             copy=False)
+    project_bom_line_details_ids = fields.One2many('project.bom.line.details',
+                                                   'project_bom_line_id',
+                                                   'BoM Line Details')
     task_id = fields.Many2one('project.task', 'Project Task')
     account_analytic_id = fields.Many2one('account.analytic.account', 'Analytic account')
     price_unit_type = fields.Selection([
@@ -88,6 +95,16 @@ class ProjectMrpBom(models.Model):
                 record.display_name = "(%s) %s" % (record.code, record.product_tmpl_id.display_name)
             else:
                 record.display_name = "%s" % record.product_tmpl_id.display_name
+
+    @api.depends(
+        'product_tmpl_id.attribute_line_ids.value_ids',
+        'product_tmpl_id.attribute_line_ids.attribute_id.create_variant',
+        'product_tmpl_id.attribute_line_ids.product_template_value_ids.ptav_active',
+    )
+    def _compute_possible_product_template_attribute_value_ids(self):
+        for bom in self:
+            bom.possible_product_template_attribute_value_ids = bom.product_tmpl_id.valid_product_template_attribute_line_ids._without_no_variant_attributes().product_template_value_ids._only_active()
+
 
     def toggle_work_added(self):
         for record in self:
@@ -253,7 +270,7 @@ class ProjectMrpBom(models.Model):
     #         record.action_version_control()
     #         record.bom_id.sequence = 9999
 
-    def material_bom_line(self):
+    def action_material_bom_line(self):
         for record in self:
             line_ids = self.env['project.mrp.bom.line']
             for line in record.project_bom_line_ids:
@@ -265,6 +282,21 @@ class ProjectMrpBom(models.Model):
                     'default_project_bom_id': record.id,
                 },
                 'domain': [('id', 'in', line_ids.ids)],
+            })
+            return action
+
+    def action_material_bom_line_details(self):
+        for record in self:
+            detail_product_tmpl_id = self.env['project.bom.line.details'].search([
+                ('project_bom_id.product_tmpl_id', '=', record.product_tmpl_id.id)
+            ])
+            action = self.env.ref('project_bom.action_project_bom_line_details')
+            action = action.read()[0]
+            action.update({
+                'context': {
+                    'default_project_bom_id': record.id,
+                },
+                'domain': [('id', 'in', detail_product_tmpl_id.ids)],
             })
             return action
 

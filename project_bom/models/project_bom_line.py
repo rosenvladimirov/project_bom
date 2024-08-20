@@ -41,6 +41,20 @@ class ProjectMrpBomLine(models.Model):
                                   required=True,
                                   ondelete='restrict',
                                   copy=False)
+    final_product_tmpl_id = fields.Many2one('product.template',
+                                            string='Final Product Template',
+                                            related='project_bom_id.product_tmpl_id')
+    final_product_id = fields.Many2one('product.product',
+                                       string='Final Product',
+                                       related='project_bom_id.product_id',
+                                       )
+    possible_bom_product_template_attribute_value_ids = fields.Many2many(
+        related='project_bom_id.possible_product_template_attribute_value_ids')
+    bom_product_template_attribute_value_ids = fields.Many2many(
+        'product.template.attribute.value', string="Apply on Variants", ondelete='restrict',
+        domain="[('id', 'in', possible_bom_product_template_attribute_value_ids)]",
+        help="BOM Product Variants needed to apply this line.")
+
     version_ids = fields.One2many('project.mrp.bom.line.version',
                                  'bom_line_id',
                                  'Versions',
@@ -58,23 +72,24 @@ class ProjectMrpBomLine(models.Model):
         domain="[('category_id', '=', project_product_uom_category_id)]")
     name = fields.Char('Description', related="project_operation_id.name", readonly=False, store=True)
 
-    workcenter_id = fields.Many2one('mrp.workcenter', 'Work Center')
-    allowed_operation_ids = fields.Many2many('mrp.routing.workcenter', compute="_compute_allowed_operation_ids")
+    project_workcenter_id = fields.Many2one('mrp.workcenter', 'Work Center')
+    project_allowed_operation_ids = fields.Many2many('mrp.routing.workcenter',
+                                             compute="_compute_project_allowed_operation_ids")
 
     project_product_qty = fields.Float('Quantity', default=1.0, digits='Product Unit of Measure', required=True)
     project_operation_id = fields.Many2one('mrp.routing.workcenter',
                                            'Consumed in Operation',
                                            check_company=True,
-                                           domain="[('id', 'in', allowed_operation_ids)]",
+                                           domain="[('id', 'in', project_allowed_operation_ids)]",
                                            help="The operation where the components are consumed, "
                                                 "or the finished products created.")
     approve = fields.Boolean('Approved')
 
-    @api.depends('workcenter_id')
-    def _compute_allowed_operation_ids(self):
+    @api.depends('project_workcenter_id')
+    def _compute_project_allowed_operation_ids(self):
         for record in self:
             record.allowed_operation_ids = self.env['mrp.routing.workcenter'].search([
-                ('workcenter_id', '=', record.workcenter_id.id)
+                ('workcenter_id', '=', record.project_workcenter_id.id)
             ])
 
     def action_approve(self, product_id):

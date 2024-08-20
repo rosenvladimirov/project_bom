@@ -1,38 +1,69 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
-from email.policy import default
 
-from odoo import models, fields, api
-from odoo.tools.populate import compute
+from odoo import models, fields, api, _
 
 
 class ProjectBomLineDetails(models.Model):
     _name = 'project.bom.line.details'
     _description = 'Project BOM line details (CAD data file)'
 
+    project_bom_id = fields.Many2one('project.mrp.bom',
+                                     'Parent Project BOM',
+                                     index=True,
+                                     ondelete='cascade',
+                                     required=True)
+    project_bom_line_id = fields.Many2one('project.mrp.bom.line',
+                                          'Parent Project BOM Line',
+                                          index=True,
+                                          ondelete='cascade',
+                                          required=True)
+
     sequence = fields.Integer(string='Sequence', default=10)
+    final_product_tmpl_id = fields.Many2one('product.template',
+                                            string='Final Product Template',
+                                            related='project_bom_id.product_tmpl_id')
+    final_product_id = fields.Many2one('product.product',
+                                       string='Final Product',
+                                       related='project_bom_id.product_id',
+                                       )
+    possible_bom_product_template_attribute_value_ids = fields.Many2many(
+        related='project_bom_id.possible_product_template_attribute_value_ids')
+    bom_product_template_attribute_value_ids = fields.Many2many(
+        'product.template.attribute.value', string="Apply on Variants", ondelete='restrict',
+        domain="[('id', 'in', possible_bom_product_template_attribute_value_ids)]",
+        help="BOM Product Variants needed to apply this line.")
 
     designator = fields.Char(string='Designator')
-    product_id = fields.Many2one('product.product', string='Product')
-    default_code = fields.Char(string='Internal reference', related='product_id.default_code', store=True)
+    product_id =  fields.Many2one('product.product', string='Component',
+                                  help='Used component for Project BOM, '
+                                       'if use HW option please discard this product.')
+    hw_option = fields.Many2one('product.product', string='HW Option',
+                                help='Used kit for Project BOM, replacement of component.')
+
+    default_code = fields.Char(string='Internal reference',
+                               related='product_id.default_code',
+                               store=True)
+    short_description = fields.Char(string='Technical Description',
+                                    related="product_id.short_description",
+                                    store=True)
+    domain_short_description = fields.Binary(default=[],
+                                             compute="_compute_short_descriptions",
+                                             string='Domain Short Description')
+
     description = fields.Char(string='Description', related='product_id.display_name', store=True)
-    short_description = fields.Char(string='Short Description')
-    domain_short_description = fields.Binary(default=[], compute="_compute_short_descriptions", string='Domain Short Description')
-    sequence = fields.Integer(string='Sequence')
+
     type = fields.Selection([
         ('bom', 'BOM'),
         ('lot', 'Lot'),
         ('kit', 'Kit'),
     ], string='Type'
     )
-    used_in_product = fields.Char(string='Used in Product')
     used_in_operation = fields.Char(string='Used In Operation')
-    product_variant = fields.Char(string='Product Variant')
-    hw_option = fields.Char(string='HW Option')
 
-    # Additional fields for Europlacer compatibility
-    x_coordinate = fields.Float(string='X Coordinate')
-    y_coordinate = fields.Float(string='Y Coordinate')
+    # Additional fields for EuroPlacer CAD compatibility
+    x_coordinate = fields.Float(string='X Coordinate', related='product_id.x_coordinate', store=True)
+    y_coordinate = fields.Float(string='Y Coordinate', related='product_id.y_coordinate', store=True)
     theta = fields.Float(string='Theta')
     pattern_reference = fields.Char(string='Pattern Reference')
     pattern_call = fields.Char(string='Pattern Call')
@@ -52,14 +83,37 @@ class ProjectBomLineDetails(models.Model):
             if record.product_id:
                 record.default_code = record.product_id.default_code
                 record.description = record.product_id.display_name
+                record.short_description = record.product_id.short_description
 
 
     @api.depends('short_description')
     def _compute_short_descriptions(self):
         for record in self:
             if record.short_description:
-                found_products = (
-                    self.env['product.product'].search([('short_description', '=', record.short_description)]))
-
+                found_products = self.env['product.product']. \
+                    search([('short_description', '=', record.short_description)])
                 if found_products:
                     record.domain_short_description = [('id', 'in', found_products.ids)]
+                else:
+                    record.domain_short_description = []
+            else:
+                record.domain_short_description = []
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if 'project_bom_line_id' not in vals:
+                project_bom_line_id =  self.env['project.mrp.bom.line'].create({
+                    'project_product_id': vals['product_id'],
+                    'project_bom_id': vals['project_bom_id'],
+                })
+                vals['project_bom_line_id'] = project_bom_line_id.id
+        return super().create(vals_list)
+
+    def unlink(self):
+        for record in self:
+            project_bom_line_ids = record.project_bom_id.project_bom_line_ids.\
+                filtered(lambda r: r.product_id == record.product_id)
+            if len(project_bom_line_ids) == 1:
+                project_bom_line_ids.unlink()
+        return super().unlink()
