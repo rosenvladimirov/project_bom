@@ -2,7 +2,7 @@
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 import logging
 
-from odoo import api, fields, models, _
+from odoo import api, fields, models, _, Command
 from odoo.models import NewId
 
 _logger = logging.getLogger(__name__)
@@ -88,9 +88,10 @@ class ProjectMrpBomLine(models.Model):
     @api.depends('project_workcenter_id')
     def _compute_project_allowed_operation_ids(self):
         for record in self:
-            record.allowed_operation_ids = self.env['mrp.routing.workcenter'].search([
+            project_allowed_operation_ids = self.env['mrp.routing.workcenter'].search([
                 ('workcenter_id', '=', record.project_workcenter_id.id)
             ])
+            record.project_allowed_operation_ids = [Command.set(project_allowed_operation_ids)]
 
     def action_approve(self, product_id):
         for record in self:

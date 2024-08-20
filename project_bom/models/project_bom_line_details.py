@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
+import logging
 
 from odoo import models, fields, api, _
+
+_logger = logging.getLogger(__name__)
 
 
 class ProjectBomLineDetails(models.Model):
@@ -102,12 +105,36 @@ class ProjectBomLineDetails(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
-            if 'project_bom_line_id' not in vals:
-                project_bom_line_id =  self.env['project.mrp.bom.line'].create({
-                    'project_product_id': vals['product_id'],
-                    'project_bom_id': vals['project_bom_id'],
-                })
+            project_bom_id = self.env['project.mrp.bom'].browse([vals['project_bom_id']])
+            if not vals.get('project_bom_line_id', False):
+                bom_id = self.env['mrp.bom'].search([
+                    ('product_tmpl_id', '=', project_bom_id.product_tmpl_id.id), "|",
+                    ('product_id', '=', project_bom_id.product_id.id),
+                    ('product_id', '=', False)
+                ])
+                if not bom_id:
+                    bom_id = self.env['mrp.bom'].create({
+                        'product_tmpl_id': project_bom_id.product_tmpl_id.id,
+                        'product_id': project_bom_id.product_id.id,
+                    })
+                project_bom_line_id = self.env['project.mrp.bom.line'].search([
+                    ('id', '=', vals['project_bom_line_id']),
+                ])
+                if not project_bom_line_id:
+                    project_bom_line_id = self.env['project.mrp.bom.line'].search([
+                        ('project_bom_id', '=', project_bom_id.id), "|",
+                        ('project_product_id', '=', vals['product_id']),
+                        ('bom_line_id.product_id', '=', vals['product_id'])
+                    ])
+                if not project_bom_line_id:
+                    project_bom_line_id = self.env['project.mrp.bom.line'].create({
+                        'project_product_id': vals['product_id'],
+                        'project_bom_id': vals['project_bom_id'],
+                        'product_id': vals['product_id'],
+                        'bom_id': bom_id.id,
+                    })
                 vals['project_bom_line_id'] = project_bom_line_id.id
+        _logger.info(vals_list)
         return super().create(vals_list)
 
     def unlink(self):
