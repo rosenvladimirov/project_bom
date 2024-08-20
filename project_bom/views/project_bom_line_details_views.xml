@@ -4,7 +4,7 @@
             <field name="name">project.bom.line.details.tree</field>
             <field name="model">project.bom.line.details</field>
             <field name="arch" type="xml">
-                <tree string="Project EuroPlacer">
+                <tree string="Project EuroPlacer" editable="top">
                     <field name="sequence" widget="handle"/>
                     <field name="project_bom_id" column_invisible="context.get('show_project_bom_id')"/>
                     <field name="project_bom_line_id" column_invisible="1"/>
@@ -14,8 +14,9 @@
                     <field name="used_in_operation"/>
                     <field name="default_code"/>
                     <field name="description"/>
-                    <field name="short_description"/>
-                    <field name="product_id"/>
+                    <field name="domain_short_description" invisible="1"/>
+                    <field name="short_description" readonly="0"/>
+                    <field name="product_id" domain="domain_short_description"/>
                     <field name="hw_option"/>
 
                     <field name="possible_bom_product_template_attribute_value_ids" invisible="1"/>

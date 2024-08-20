@@ -96,6 +96,7 @@ class ProjectBomLineDetails(models.Model):
                 found_products = self.env['product.product']. \
                     search([('short_description', '=', record.short_description)])
                 if found_products:
+                    record.product_id = found_products[0].id
                     record.domain_short_description = [('id', 'in', found_products.ids)]
                 else:
                     record.domain_short_description = []
