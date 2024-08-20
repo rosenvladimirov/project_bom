@@ -47,21 +47,24 @@
                     <sheet>
                         <field name="project_bom_line_id" invisible="1"/>
                         <field name="project_bom_id" invisible="1"/>
+                        <field name="domain_short_description" invisible="1"/>
                         <group>
-                            <group>
-                                <field name="designator"/>
+                            <group name="final_product" string="Final product">
                                 <field name="final_product_tmpl_id" string="Used in product template"/>
                                 <field name="final_product_id" string="Used in product variant"/>
-                                <field name="used_in_operation"/>
+                            </group>
+                            <group name="components" string="Component">
                                 <field name="default_code"/>
                                 <field name="description"/>
                                 <field name="short_description"/>
-                                <field name="product_id"/>
+                                <field name="product_id" domain="domain_short_description"/>
                                 <field name="hw_option"/>
+                                <field name="used_in_operation"/>
                                 <field name="possible_bom_product_template_attribute_value_ids" invisible="1"/>
                                 <field name="bom_product_template_attribute_value_ids" widget="many2many_tags" options="{'no_create': True}" groups="product.group_product_variant"/>
                             </group>
-                            <group>
+                            <group string="CAD data" name="cad">
+                                <field name="designator"/>
                                 <field name="x_coordinate"/>
                                 <field name="y_coordinate"/>
                                 <field name="theta"/>
@@ -70,9 +73,7 @@
                                 <field name="fiducial_mark"/>
                                 <field name="rejection_mark"/>
                             </group>
-                        </group>
-                        <group>
-                            <group>
+                            <group string="EuroPlacer data" name="euro_placer">
                                 <field name="component_test"/>
                                 <field name="optimization_mode"/>
                                 <field name="auto_adaptive_sequencing"/>

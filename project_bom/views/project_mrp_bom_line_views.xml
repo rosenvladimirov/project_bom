@@ -53,7 +53,7 @@
                            groups="mrp.group_mrp_routings"
                            required="display_type == 'line_operation'"/>
                     <field name="display_type" column_invisible="1"/>
-                    <field name="allowed_operation_ids" column_invisible="True"/>
+                    <field name="project_allowed_operation_ids" column_invisible="True"/>
                 </tree>
             </field>
         </record>
