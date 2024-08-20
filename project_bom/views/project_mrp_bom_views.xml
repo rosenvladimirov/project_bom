@@ -101,7 +101,7 @@
                                                options="{'no_open': True}"
                                         />
                                         <field name="name" widget="section_and_note_text" optional="show"/>
-                                        <field name="project_product_uom_category_id" invisible="1"/>
+                                        <field name="project_product_uom_category_id" column_invisible="1"/>
                                         <field name="project_product_qty"/>
                                         <field name="project_product_uom_id"
                                                force_save="1"
@@ -116,7 +116,7 @@
                                                groups="mrp.group_mrp_routings"
                                                required="display_type == 'line_operation'"/>
                                         <field name="company_id"/>
-                                        <field name="allowed_operation_ids" column_invisible="True"/>
+                                        <field name="project_allowed_operation_ids" column_invisible="1"/>
                                     </tree>
                                 </field>
                                 <field name="note" class="oe_inline" placeholder="Write description ..."/>
