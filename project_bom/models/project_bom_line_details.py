@@ -3,6 +3,7 @@
 import logging
 
 from odoo import models, fields, api, _
+from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
 
@@ -81,6 +82,7 @@ class ProjectBomLineDetails(models.Model):
     auto_adaptive_sequencing = fields.Boolean(string='Auto Adaptive Sequencing')
     stacking_board_number = fields.Integer(string='Stacking Board Number')
 
+    @api.onchange('product_id')
     def onchange_product_id(self):
         for record in self:
             if record.product_id:
@@ -88,6 +90,13 @@ class ProjectBomLineDetails(models.Model):
                 record.description = record.product_id.display_name
                 record.short_description = record.product_id.short_description
 
+    @api.onchange('short_description')
+    def onchange_short_description(self):
+        for record in self:
+            found_products = self.env['product.product']. \
+                search([('short_description', '=', record.short_description)])
+            if not found_products:
+                raise UserError(_("Missing product with technical description: %s") % record.short_description)
 
     @api.depends('short_description')
     def _compute_short_descriptions(self):

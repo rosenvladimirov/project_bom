@@ -35,7 +35,7 @@ class ProjectMrpBom(models.Model):
     active = fields.Boolean('Active', default=True,
                             help="If the active field is set to False, it will allow you to hide the bills of "
                                  "material without removing it.")
-    work_added = fields.Boolean('Work type', help='Please checked it if work with every time in added mode')
+    # work_added = fields.Boolean('Work type', help='Please checked it if work with every time in added mode')
     code = fields.Char('Code')
     version = fields.Char('Version', default='1.0', required=True)
     display_name = fields.Char('Display name', compute='_compute_display_name')
@@ -106,9 +106,9 @@ class ProjectMrpBom(models.Model):
             bom.possible_product_template_attribute_value_ids = bom.product_tmpl_id.valid_product_template_attribute_line_ids._without_no_variant_attributes().product_template_value_ids._only_active()
 
 
-    def toggle_work_added(self):
-        for record in self:
-            record.work_added = not record.work_added
+    # def toggle_work_added(self):
+    #     for record in self:
+    #         record.work_added = not record.work_added
 
     def store_standard_price(self):
         for record in self:
@@ -270,6 +270,39 @@ class ProjectMrpBom(models.Model):
     #         record.action_version_control()
     #         record.bom_id.sequence = 9999
 
+    def action_update_groups(self, project_line_id, vals):
+        for record in self:
+            product_tmpl = {}
+            product_id = project_line_id.product_id
+            product_tmpl_ids = record.project_bom_group_ids. \
+                filtered(lambda r: r.product_tmpl_id == product_id.product_tmpl_id)
+            for product_tmpl_id in product_tmpl_ids:
+                product_tmpl[product_tmpl_id] = {
+                    "price_unit": product_tmpl_id.price_unit,
+                    "partner_id": product_tmpl_id.partner_id.id,
+                    "product_qty": 0.0,
+                    "product_uom_id": product_tmpl_id.product_uom_id.id,
+                }
+            product_tmpl_ids.unlink()
+            for project_line_id in record.project_bom_line_ids.filtered(lambda r: r.product_id.id != product_id.id):
+                product_tmpl_id = project_line_id.product_id.product_tmpl_id
+                if not product_tmpl.get(product_tmpl_id):
+                    product_tmpl[product_tmpl_id] = {
+                        "price_unit": 0.0,
+                        "partner_id": False,
+                        "product_qty": 0.0,
+                        "product_uom_id": product_tmpl_id.uom_id.id,
+                    }
+                product_tmpl[product_tmpl_id]["product_qty"] += project_line_id.product_qty
+            for product_tmpl_id, line in product_tmpl.values():
+                record.project_bom_group_ids |= self.env['project.mrp.bom.group'].create({
+                    'product_tmpl_id': product_tmpl_id.id,
+                    'price_unit': line["price_unit"],
+                    'partner_id': line["partner_id"],
+                    'product_qty': line["product_qty"],
+                    'product_uom_id': line["product_uom_id"],
+                })
+
     def action_material_bom_line(self):
         for record in self:
             line_ids = self.env['project.mrp.bom.line']
@@ -290,7 +323,7 @@ class ProjectMrpBom(models.Model):
             detail_product_tmpl_id = self.env['project.bom.line.details'].search([
                 ('project_bom_id.product_tmpl_id', '=', record.product_tmpl_id.id)
             ])
-            action = self.env.ref('project_bom.action_project_bom_line_details')
+            action = self.env.ref('project_bom.action_project_sub_bom_line_details')
             action = action.read()[0]
             action.update({
                 'context': {

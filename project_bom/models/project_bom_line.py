@@ -141,3 +141,10 @@ class ProjectMrpBomLine(models.Model):
                 record.bom_line_id.product_uom_id = version.product_uom_id
                 record.bom_line_id.product_qty = version.product_qty
             # record.project_bom_id
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        res = super().create(vals_list)
+        for project_line_id, vals in zip(res, vals_list):
+            project_line_id.action_update_groups(project_line_id, vals)
+        return res
