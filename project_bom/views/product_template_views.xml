@@ -5,9 +5,9 @@
         <field name="model">product.template</field>
         <field name="inherit_id" ref="product.product_template_form_view"/>
         <field name="arch" type="xml">
-            <xpath expr="//field[@name='categ_id']" position="after">
-                <field name="product_type_id"/>
-            </xpath>
+<!--            <xpath expr="//field[@name='categ_id']" position="after">-->
+<!--                <field name="product_type_id"/>-->
+<!--            </xpath>-->
             <xpath expr="//notebook/page[@name='general_information']" position="after">
                 <page string="Project BOM data" name="project_bom_data" invisible="product_variant_count &gt; 1">
                     <group>
@@ -24,34 +24,34 @@
             </xpath>
         </field>
     </record>
-    <record id="product_variant_easy_edit_view" model="ir.ui.view">
-        <field name="name">product.template.common.form</field>
-        <field name="model">product.template</field>
-        <field name="inherit_id" ref="product.product_variant_easy_edit_view"/>
-        <field name="arch" type="xml">
-            <xpath expr="//group" position="after">
-                <group>
-                    <group string="CAD data" name="cad">
-                        <field name="x_coordinate"/>
-                        <field name="y_coordinate"/>
-                    </group>
-                    <group string="Technical data">
-                        <field name="short_description"/>
-                    </group>
-                </group>
-            </xpath>
-        </field>
-    </record>
-    <record id="product_category_form_view" model="ir.ui.view">
-        <field name="name">product.category.form</field>
-        <field name="model">product.category</field>
-        <field name="inherit_id" ref="product.product_category_form_view"/>
-        <field name="arch" type="xml">
-            <group name="first" position="after">
-                    <group string="Project BOMs">
-                        <field name="product_type_id"/>
-                    </group>
-            </group>
-        </field>
-    </record>
+<!--    <record id="product_variant_easy_edit_view" model="ir.ui.view">-->
+<!--        <field name="name">product.template.common.form</field>-->
+<!--        <field name="model">product.template</field>-->
+<!--        <field name="inherit_id" ref="product.product_variant_easy_edit_view"/>-->
+<!--        <field name="arch" type="xml">-->
+<!--            <xpath expr="//group" position="after">-->
+<!--                <group>-->
+<!--                    <group string="CAD data" name="cad">-->
+<!--                        <field name="x_coordinate"/>-->
+<!--                        <field name="y_coordinate"/>-->
+<!--                    </group>-->
+<!--                    <group string="Technical data">-->
+<!--                        <field name="short_description"/>-->
+<!--                    </group>-->
+<!--                </group>-->
+<!--            </xpath>-->
+<!--        </field>-->
+<!--    </record>-->
+<!--    <record id="product_category_form_view" model="ir.ui.view">-->
+<!--        <field name="name">product.category.form</field>-->
+<!--        <field name="model">product.category</field>-->
+<!--        <field name="inherit_id" ref="product.product_category_form_view"/>-->
+<!--        <field name="arch" type="xml">-->
+<!--            <group name="first" position="after">-->
+<!--                    <group string="Project BOMs">-->
+<!--                        <field name="product_type_id"/>-->
+<!--                    </group>-->
+<!--            </group>-->
+<!--        </field>-->
+<!--    </record>-->
 </odoo>

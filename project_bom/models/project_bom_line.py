@@ -146,5 +146,5 @@ class ProjectMrpBomLine(models.Model):
     def create(self, vals_list):
         res = super().create(vals_list)
         for project_line_id, vals in zip(res, vals_list):
-            project_line_id.action_update_groups(project_line_id, vals)
+            project_line_id.project_bom_id.action_update_groups(project_line_id, vals)
         return res

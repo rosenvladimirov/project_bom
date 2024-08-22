@@ -65,7 +65,7 @@ class ProjectMrpBomGroup(models.Model):
     ondelete='cascade',
     required=True)
 
-    product_type_id = fields.Many2one('project.product.types', 'Product type', required=True)
+    # product_type_id = fields.Many2one('project.product.types', 'Product type')
     product_tmpl_id = fields.Many2one('product.template', 'Product Template', required=True)
     product_qty = fields.Float('Product Quantity', default=1.0)
     forecast_product_qty = fields.Float('Forecast Product Quantity', compute='_compute_forecast')
@@ -164,23 +164,23 @@ class ProjectMrpBomGroup(models.Model):
                 'The Product Unit of Measure you chose has a different category than in the product form.')}
         return res
 
-    @api.onchange('product_tmpl_id')
-    def onchange_product_tmpl_id(self):
-        res = {}
-        if self.product_tmpl_id:
-            # product_type_id = False
-            product_tmpl_id = self.product_tmpl_id
-            product_type_id = product_tmpl_id.categ_id.get_product_type_id()
-            if product_tmpl_id.product_type_id:
-                product_type_id = product_tmpl_id.product_type_id
-            if product_type_id:
-                self.product_type_id = product_type_id.id
-                self.sequence = int(product_type_id.code or '0')
-        return res
-
-    @api.onchange('product_type_id')
-    def onchange_product_type_id(self):
-        self.sequence = int(self.product_type_id.code or '0')
+    # @api.onchange('product_tmpl_id')
+    # def onchange_product_tmpl_id(self):
+    #     res = {}
+    #     if self.product_tmpl_id:
+    #         # product_type_id = False
+    #         product_tmpl_id = self.product_tmpl_id
+    #         product_type_id = product_tmpl_id.categ_id.get_product_type_id()
+    #         if product_tmpl_id.product_type_id:
+    #             product_type_id = product_tmpl_id.product_type_id
+    #         if product_type_id:
+    #             self.product_type_id = product_type_id.id
+    #             self.sequence = int(product_type_id.code or '0')
+    #     return res
+    #
+    # @api.onchange('product_type_id')
+    # def onchange_product_type_id(self):
+    #     self.sequence = int(self.product_type_id.code or '0')
 
     # @api.onchange('product_id')
     # def onchange_product_id(self):
