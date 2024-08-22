@@ -56,6 +56,15 @@ class ProjectMrpBomGroup(models.Model):
                 'forecast_product_qty': line.product_qty * line.project_bom_id.forecast_product_qty
             })
 
+    sequence = fields.Integer('Sequence', default=1,
+                              help="Gives the sequence order when displaying.")
+    project_bom_id = fields.Many2one(
+    'project.mrp.bom',
+    'Parent Project BOM',
+    index=True,
+    ondelete='cascade',
+    required=True)
+
     product_type_id = fields.Many2one('project.product.types', 'Product type', required=True)
     product_tmpl_id = fields.Many2one('product.template', 'Product Template', required=True)
     product_qty = fields.Float('Product Quantity', default=1.0)
@@ -79,16 +88,8 @@ class ProjectMrpBomGroup(models.Model):
                                        "in company currency and in product uom.",
                                   )
 
-    sequence = fields.Integer('Sequence', default=1,
-                              help="Gives the sequence order when displaying.")
-    project_bom_id = fields.Many2one(
-    'project.mrp.bom',
-    'Parent Project BOM',
-    index=True,
-    ondelete='cascade',
-    required=True)
-    attribute_value_ids = fields.Many2many('product.attribute.value', string='Variants',
-                                           help="BOM Product Variants needed form apply this line.")
+    # attribute_value_ids = fields.Many2many('product.attribute.value', string='Variants',
+    #                                        help="BOM Product Variants needed form apply this line.")
     # operation_id = fields.Many2one('mrp.routing.workcenter', 'Consumed in Operation',
     #                                help="The operation where the components are consumed, or the finished products "
     #                                     "created.")

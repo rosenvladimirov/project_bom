@@ -17,7 +17,6 @@
         'mrp',
     ],
     'data': [
-        'data/ir_cron.xml',
         'security/ir.model.access.csv',
         'views/project_bom_menuitems.xml',
         'views/project_mrp_bom_views.xml',
