@@ -12,6 +12,7 @@
                         <group>
                             <group string="Product">
                                 <field name="bom_line_id" invisible="1"/>
+                                <field name="possible_bom_product_template_attribute_value_ids" column_invisible="1"/>
                                 <field name="sequence"/>
                                 <field name="company_id"/>
                                 <field name="project_product_id"/>
@@ -36,6 +37,7 @@
             <field name="arch" type="xml">
                 <tree string="Components" editable="top">
                     <field name="bom_line_id" column_invisible="True"/>
+                    <field name="possible_bom_product_template_attribute_value_ids" column_invisible="1"/>
                     <field name="sequence" widget="handle"/>
                     <field name="company_id"/>
                     <field name="project_product_id"

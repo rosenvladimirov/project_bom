@@ -294,9 +294,13 @@ class ProjectMrpBom(models.Model):
                         "product_uom_id": product_tmpl_id.uom_id.id,
                     }
                 product_tmpl[product_tmpl_id]["product_qty"] += project_line_id.product_qty
-            for product_tmpl_id, line in product_tmpl.values():
+            for product_tmpl_id, line in product_tmpl.items():
+                # product_type_id = product_tmpl_id.categ_id.get_product_type_id()
+                # if product_tmpl_id.product_type_id:
+                #     product_type_id = product_tmpl_id.product_type_id
                 record.project_bom_group_ids |= self.env['project.mrp.bom.group'].create({
                     'product_tmpl_id': product_tmpl_id.id,
+                    # 'product_type_id': product_type_id and product_type_id.id or False,
                     'price_unit': line["price_unit"],
                     'partner_id': line["partner_id"],
                     'product_qty': line["product_qty"],

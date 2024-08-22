@@ -92,7 +92,7 @@ class ProjectBomLineDetails(models.Model):
 
     @api.onchange('short_description')
     def onchange_short_description(self):
-        for record in self:
+        for record in self.filtered(lambda r: r.short_description):
             found_products = self.env['product.product']. \
                 search([('short_description', '=', record.short_description)])
             if not found_products:
