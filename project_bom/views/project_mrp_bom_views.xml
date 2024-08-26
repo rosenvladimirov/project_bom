@@ -24,6 +24,13 @@
                                 class="oe_stat_button"
                                 string="Detail components"
                                 type="object" context="{'default_project_bom_id': active_id}"/>
+                            <button
+                                name="%(action_custom_import_wizard)d"
+                                icon="fa-upload"
+                                class="oe_stat_button"
+                                string="Import components"
+                                type="action"
+                                context="{'default_project_bom_id': active_id}"/>
                             <button name="store_standard_price"
                                 icon="fa-floppy-o"
                                 class="oe_stat_button"

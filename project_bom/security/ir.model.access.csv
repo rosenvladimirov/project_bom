@@ -11,3 +11,7 @@ access_project_bom_line_details_mrp_user,project.bom.line.details user,model_pro
 access_project_bom_line_details_manager,project.bom.line.details manager,model_project_bom_line_details,project.group_project_manager,1,1,1,1
 access_project_product_types_mrp_user,project.product.types user,model_project_product_types,project.group_project_user,1,0,0,0
 access_project_product_types_manager,project.product.types manager,model_project_product_types,project.group_project_manager,1,1,1,1
+access_project_bom_line_details_import_wizard_mrp_user,project.bom.line.details.import.wizard user,model_project_bom_line_details_import_wizard,project.group_project_user,1,0,0,0
+access_project_bom_line_details_import_wizard_manager,project.bom.line.details.import.wizard manager,model_project_bom_line_details_import_wizard,project.group_project_manager,1,1,1,1
+access_project_bom_line_details_import_data_mrp_user,project.bom.line.details.import.data user,model_project_bom_line_details_import_data,project.group_project_user,1,0,0,0
+access_project_bom_line_details_import_data_manager,project.bom.line.details.import.data manager,model_project_bom_line_details_import_data,project.group_project_manager,1,1,1,1
