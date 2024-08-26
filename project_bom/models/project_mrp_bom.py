@@ -270,21 +270,28 @@ class ProjectMrpBom(models.Model):
     #         record.action_version_control()
     #         record.bom_id.sequence = 9999
 
-    def action_update_groups(self, project_line_id, vals):
+    def action_update_groups(self, product_id):
         for record in self:
             product_tmpl = {}
-            product_id = project_line_id.product_id
-            product_tmpl_ids = record.project_bom_group_ids. \
-                filtered(lambda r: r.product_tmpl_id == product_id.product_tmpl_id)
-            for product_tmpl_id in product_tmpl_ids:
+            if product_id:
+                project_bom_group_ids = record.project_bom_group_ids.\
+                    filtered(lambda r: r.product_tmpl_id == product_id.product_tmpl_id)
+            else:
+                project_bom_group_ids = record.project_bom_group_ids
+            for product_tmpl_id in project_bom_group_ids:
                 product_tmpl[product_tmpl_id] = {
                     "price_unit": product_tmpl_id.price_unit,
                     "partner_id": product_tmpl_id.partner_id.id,
                     "product_qty": 0.0,
                     "product_uom_id": product_tmpl_id.product_uom_id.id,
                 }
-            product_tmpl_ids.unlink()
-            for project_line_id in record.project_bom_line_ids.filtered(lambda r: r.product_id.id != product_id.id):
+            project_bom_group_ids.unlink()
+            if not product_id:
+                project_bom_line_ids = record.project_bom_line_ids.filtered(lambda r: r.product_id == product_id)
+            else:
+                project_bom_line_ids = record.project_bom_line_ids
+
+            for project_line_id in project_bom_line_ids:
                 product_tmpl_id = project_line_id.product_id.product_tmpl_id
                 if not product_tmpl.get(product_tmpl_id):
                     product_tmpl[product_tmpl_id] = {
@@ -294,18 +301,21 @@ class ProjectMrpBom(models.Model):
                         "product_uom_id": product_tmpl_id.uom_id.id,
                     }
                 product_tmpl[product_tmpl_id]["product_qty"] += project_line_id.product_qty
+
             for product_tmpl_id, line in product_tmpl.items():
-                # product_type_id = product_tmpl_id.categ_id.get_product_type_id()
-                # if product_tmpl_id.product_type_id:
-                #     product_type_id = product_tmpl_id.product_type_id
-                record.project_bom_group_ids |= self.env['project.mrp.bom.group'].create({
-                    'product_tmpl_id': product_tmpl_id.id,
-                    # 'product_type_id': product_type_id and product_type_id.id or False,
-                    'price_unit': line["price_unit"],
-                    'partner_id': line["partner_id"],
-                    'product_qty': line["product_qty"],
-                    'product_uom_id': line["product_uom_id"],
-                })
+                found_product_tmpl_id = record.project_bom_group_ids.\
+                    filtered(lambda r: r.product_tmpl_id == product_tmpl_id)
+                if found_product_tmpl_id:
+                    found_product_tmpl_id.product_qty = line["product_qty"]
+                else:
+                    record.project_bom_group_ids |= self.env['project.mrp.bom.group'].create({
+                        'product_tmpl_id': product_tmpl_id.id,
+                        # 'product_type_id': product_type_id and product_type_id.id or False,
+                        'price_unit': line["price_unit"],
+                        'partner_id': line["partner_id"],
+                        'product_qty': line["product_qty"],
+                        'product_uom_id': line["product_uom_id"],
+                    })
 
     def action_material_bom_line(self):
         for record in self:
