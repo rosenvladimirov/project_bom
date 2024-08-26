@@ -85,6 +85,7 @@ class ProjectBomLineImportWizard(models.TransientModel):
         }
 
     def action_import(self):
+        self._validate_data()
         if self.not_validated:
             raise UserError('Please fix validation errors!')
 
