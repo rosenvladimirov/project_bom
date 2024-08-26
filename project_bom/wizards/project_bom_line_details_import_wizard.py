@@ -16,6 +16,8 @@ class ProjectBomLineImportWizard(models.TransientModel):
 
     line_details = fields.One2many('project.bom.line.details.import.data', 'import_id', string='Line Details')
 
+    project_bom_id = fields.Many2one('project.mrp.bom', string='Project BOM')
+
     def action_upload(self):
         self.ensure_one()
 
@@ -90,7 +92,6 @@ class ProjectBomLineImportWizard(models.TransientModel):
             raise UserError('Please fix validation errors!')
 
         for line in self.line_details:
-            designators = line.designator.split(',')
             found_products = self.env['product.product'].search([('default_code', '=', line.default_code)])
             if not found_products:
                 found_products = self.env['product.product'].search([('short_description', '=', line.short_description)])
@@ -98,9 +99,11 @@ class ProjectBomLineImportWizard(models.TransientModel):
             if not found_products:
                 raise UserError('Product not found. The technical description or default code are not matching any product.')
 
+            designators = line.designator.split(',')
+
             for designator in designators:
-                self.env['project.mrp.bom.line.details'].create({
-                    'project_bom_id': self.env.context.get('project_bom_id'),
+                self.env['project.bom.line.details'].create({
+                    'project_bom_id': self.project_bom_id.id,
                     'product_id': found_products[0].id,
                     'designator': designator
                 })
