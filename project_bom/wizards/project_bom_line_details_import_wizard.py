@@ -125,13 +125,20 @@ class ProjectBomLineImportWizard(models.TransientModel):
         }
 
     def action_import(self):
-        self._validate_data()
+        # self._validate_data()
         if self.not_validated:
             raise UserError('Please fix validation errors!')
 
         for line in self.line_details:
             if not line.product_id:
                 raise UserError('Product not found. The technical description or default code are not matching any product.')
+            self.env['project.bom.line.details'].create({
+                'project_bom_id': self.project_bom_id.id,
+                'product_id': line.product_id.id,
+                'designator': line.designator,
+                'description': line.description,
+                'short_description': line.short_description,
+            })
 
     def _validate_data(self):
         not_validated = False
