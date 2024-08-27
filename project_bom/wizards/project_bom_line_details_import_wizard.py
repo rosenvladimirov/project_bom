@@ -98,8 +98,22 @@ class ProjectBomLineImportWizard(models.TransientModel):
                         'designator': designator,
                         'import_id': self.id
                     })
+                if not designator_import_lines:
+                    new_import_data.create({
+                        'qty': import_line.qty,
+                        'default_code': import_line.default_code,
+                        'short_description': import_line.short_description,
+                        'description': import_line.description,
+                        'import_id': self.id
+                    })
             import_data.unlink()
         self._validate_data()
+        action = self.env.ref('project_bom.action_custom_import_wizard', raise_if_not_found=False)
+
+        if action:
+            result = action.read()[0]
+            result['res_id'] = self.id
+            return result
 
         return {
             'name': _('Import BOM Line Details'),
