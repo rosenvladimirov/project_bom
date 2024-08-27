@@ -23,6 +23,8 @@
         'views/project_mrp_bom_line_views.xml',
         'views/project_bom_line_details_views.xml',
         'views/product_template_views.xml',
+        'views/product_product_views.xml',
+        'wizards/project_bom_line_details_import_wizard.xml',
         # 'wizards/purchase_prices.xml',
         # 'wizards/product_bom_import_wizard.xml',
         'wizards/project_bom_line_details_import_wizard.xml',
