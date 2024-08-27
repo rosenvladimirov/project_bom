@@ -12,7 +12,7 @@ class ProjectBomLineImportWizard(models.TransientModel):
 
     data_file = fields.Binary(string='File')
     filename = fields.Char(string='Filename')
-    not_validated = fields.Boolean(string='Validated', default=True)
+    validated = fields.Boolean(string='Validated', default=False)
     line_details = fields.One2many('project.bom.line.details.import.data',
                                    'import_id',
                                    string='Line Details')
@@ -125,29 +125,28 @@ class ProjectBomLineImportWizard(models.TransientModel):
         }
 
     def action_import(self):
-        self._validate_data()
-        if self.not_validated:
-            raise UserError('Please fix validation errors!')
-
         for line in self.line_details:
-            if not line.product_id:
-                raise UserError('Product not found. The technical description or default code are not matching any product.')
+            self.env['project.bom.line.details'].create({
+                'project_bom_id': self.project_bom_id.id,
+                'product_id': line.product_id.id,
+                'product_qty': line.qty,
+                'designator': line.designator,
+            })
+
 
     def _validate_data(self):
-        not_validated = False
+        is_valid = True
         for line in self.line_details:
-            lines_valid = True
+            line_valid = True
             error_message = []
 
-            designators = line.designator.split(',')
-
-            if len(designators) != line.qty:
+            if line.qty % 1 != 0:
                 error_message.append(_('Designator count does not match quantity.'))
-                lines_valid = False
+                line_valid = False
 
             if not line.default_code:
                 error_message.append(_('Internal reference is required.'))
-                lines_valid = False
+                line_valid = False
             else:
                 found_products = self.env['product.product'].search([
                     ('default_code', '=', line.default_code)
@@ -155,7 +154,7 @@ class ProjectBomLineImportWizard(models.TransientModel):
                 if not found_products:
                     if not line.short_description:
                         error_message.append(_('Technical description is required.'))
-                        lines_valid = False
+                        line_valid = False
                     else:
                         found_products = self.env['product.product'].search([
                             ('short_description', '=', line.short_description)
@@ -163,16 +162,17 @@ class ProjectBomLineImportWizard(models.TransientModel):
                         if not found_products:
                             error_message.append(_('Product not found. The technical description '
                                                    'or default code are not matching any product.'))
-                            lines_valid = False
+                            line_valid = False
                 if found_products:
                     line.product_id = found_products[0].id
-                    error_message.append(_(f"{len(found_products) > 1 and 'To many products found with some technical description or default code' or ''}"))
+                    error_message.append(
+                        _(f"{len(found_products) > 1 and 'To many products found with some technical description or default code' or ''}"))
 
             line.write({
-                'not_validated': lines_valid,
+                'is_valid': line_valid,
                 'error_message': error_message and '\n'.join(error_message) or "",
             })
-            if not not_validated and not lines_valid:
-                not_validated = True
+            if not line_valid:
+                is_valid = False
 
-        self.not_validated = not_validated
+        self.validated = is_valid

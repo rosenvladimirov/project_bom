@@ -310,6 +310,7 @@ class ProjectMrpBom(models.Model):
                 else:
                     record.project_bom_group_ids |= self.env['project.mrp.bom.group'].create({
                         'product_tmpl_id': product_tmpl_id.id,
+                        'project_bom_id': record.id,
                         # 'product_type_id': product_type_id and product_type_id.id or False,
                         'price_unit': line["price_unit"],
                         'partner_id': line["partner_id"],

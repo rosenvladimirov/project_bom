@@ -1,0 +1,14 @@
+<odoo>
+    <data>
+        <record id="project_bom_product" model="ir.ui.view">
+            <field name="name">product.product.form.extended</field>
+            <field name="model">product.product</field>
+            <field name="inherit_id" ref="product.product_normal_form_view"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='default_code']" position="after">
+                    <field name="short_description"/>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>
