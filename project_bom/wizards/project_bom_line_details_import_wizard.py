@@ -3,7 +3,6 @@
 import base64
 
 from odoo import models, fields, _
-from odoo.addons.account_avatax.tests.mocked_invoice_1_response import response
 from odoo.exceptions import UserError
 
 
