@@ -120,18 +120,19 @@ class ProjectBomLineImportWizard(models.TransientModel):
                 raise UserError('Product not found. The technical description or default code are not matching any product.')
 
     def _validate_data(self):
+        not_validated = False
         for line in self.line_details:
             lines_valid = True
-            error_message = ""
+            error_message = []
 
             designators = line.designator.split(',')
 
             if len(designators) != line.qty:
-                error_message = 'Designator count does not match quantity.'
+                error_message.append(_('Designator count does not match quantity.'))
                 lines_valid = False
 
             if not line.default_code:
-                error_message = 'Internal reference is required.'
+                error_message.append(_('Internal reference is required.'))
                 lines_valid = False
             else:
                 found_products = self.env['product.product'].search([
@@ -139,22 +140,25 @@ class ProjectBomLineImportWizard(models.TransientModel):
                 ])
                 if not found_products:
                     if not line.short_description:
-                        error_message = 'Technical description is required.'
+                        error_message.append(_('Technical description is required.'))
                         lines_valid = False
                     else:
                         found_products = self.env['product.product'].search([
                             ('short_description', '=', line.short_description)
                         ])
                         if not found_products:
-                            error_message = \
-                                'Product not found. The technical description or default code are not matching any product.'
+                            error_message.append(_('Product not found. The technical description '
+                                                   'or default code are not matching any product.'))
                             lines_valid = False
                 if found_products:
                     line.product_id = found_products[0].id
-                    error_message = _(f"{len(found_products)}")
+                    error_message.append(_(f"{len(found_products) > 1 and 'To many products found with some technical description or default code' or ''}"))
 
             line.write({
                 'not_validated': lines_valid,
-                'error_message': error_message,
+                'error_message': error_message and '\n'.join(error_message) or "",
             })
-        self.not_validated = not any(not line.not_validated for line in self.line_details)
+            if not not_validated and not lines_valid:
+                not_validated = True
+
+        self.not_validated = not_validated

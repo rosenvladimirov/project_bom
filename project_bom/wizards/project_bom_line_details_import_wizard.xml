@@ -18,12 +18,16 @@
                     </group>
                     <separator string="Uploaded data" invisible="not line_details"/>
                     <field name="line_details" nolabel="1" invisible="not line_details" readonly="1" force_save="1">
-                        <tree string="Project BOM Line Details Import Data" decoration-danger="error_message">
+                        <tree string="Project BOM Line Details Import Data"
+                              decoration-danger="not not_validated"
+                              decoration-success="not_validated">
+                            <field name="not_validated" column_invisible="1"/>
                             <field name="qty"/>
                             <field name="designator"/>
                             <field name="default_code"/>
                             <field name="description"/>
                             <field name="short_description"/>
+                            <field name="product_id"/>
                             <field name="error_message"/>
                         </tree>
                     </field>
