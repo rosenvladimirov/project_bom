@@ -128,14 +128,10 @@ class ProjectBomLineDetails(models.Model):
                         'product_id': project_bom_id.product_id.id,
                     })
                 project_bom_line_id = self.env['project.mrp.bom.line'].search([
-                    ('id', '=', vals['project_bom_line_id']),
+                    ('project_bom_id', '=', project_bom_id.id), "|",
+                    ('project_product_id', '=', vals['product_id']),
+                    ('bom_line_id.product_id', '=', vals['product_id'])
                 ])
-                if not project_bom_line_id:
-                    project_bom_line_id = self.env['project.mrp.bom.line'].search([
-                        ('project_bom_id', '=', project_bom_id.id), "|",
-                        ('project_product_id', '=', vals['product_id']),
-                        ('bom_line_id.product_id', '=', vals['product_id'])
-                    ])
                 if not project_bom_line_id:
                     project_bom_line_id = self.env['project.mrp.bom.line'].create({
                         'project_product_id': vals['product_id'],
@@ -143,9 +139,27 @@ class ProjectBomLineDetails(models.Model):
                         'product_id': vals['product_id'],
                         'bom_id': bom_id.id,
                     })
+                else:
+                    project_bom_line_id.write({
+                        'project_product_qty': project_bom_line_id.project_product_qty + 1.0,
+                    })
                 vals['project_bom_line_id'] = project_bom_line_id.id
-        _logger.info(vals_list)
-        return super().create(vals_list)
+        _logger.info(f"NEW {vals_list}")
+        res = super().create(vals_list)
+        for record, vals in zip(res, vals_list):
+            _logger.info(f"After create {record}, {vals}")
+            record.project_bom_id.project_bom_line_details_ids.write({})
+        return res
+
+    def write(self, vals):
+        res = super().write(vals)
+        if vals.get('product_id', False):
+            for record in self:
+                product_qty = sum(record.project_bom_line_id.mapped('project_product_qty'))
+                record.project_bom_line_id.write({
+                    'project_product_qty': product_qty,
+                })
+        return res
 
     def unlink(self):
         for record in self:
@@ -153,4 +167,8 @@ class ProjectBomLineDetails(models.Model):
                 filtered(lambda r: r.product_id == record.product_id)
             if len(project_bom_line_ids) == 1:
                 project_bom_line_ids.unlink()
+                project_group_ids = record.project_bom_id.project_bom_group_ids. \
+                    filtered(lambda r: r.product_tmpl_id.id == record.product_id.product_tmpl_id.id)
+                if len(project_group_ids) > 0:
+                    project_group_ids.unlink()
         return super().unlink()

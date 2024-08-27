@@ -27,6 +27,7 @@
         'wizards/project_bom_line_details_import_wizard.xml',
         # 'wizards/purchase_prices.xml',
         # 'wizards/product_bom_import_wizard.xml',
+        'wizards/project_bom_line_details_import_wizard.xml',
     ],
     'demo': [
     ],

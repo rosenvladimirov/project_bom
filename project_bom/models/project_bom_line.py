@@ -146,5 +146,20 @@ class ProjectMrpBomLine(models.Model):
     def create(self, vals_list):
         res = super().create(vals_list)
         for project_line_id, vals in zip(res, vals_list):
-            project_line_id.project_bom_id.action_update_groups(project_line_id, vals)
+            project_line_id.project_bom_id.action_update_groups(res.project_product_id)
         return res
+
+    def write(self, vals):
+        res =  super().write(vals)
+        for record in self:
+            if 'project_product_id' in vals:
+                record.project_bom_id.action_update_groups(record.project_product_id)
+        return res
+
+    def unlink(self):
+        for record in self:
+            project_bom_group_ids = record.project_bom_id.project_bom_group_ids.\
+                filtered(lambda r: r.product_tmpl_id == record.project_product_id.product_tmpl_id)
+            if len(project_bom_group_ids) > 0 and not record.project_bom_id.project_bom_line_ids. \
+                    filtered(lambda r: r.product_id == record.project_product_id and not r.id == record.id):
+                project_bom_group_ids.unlink()
