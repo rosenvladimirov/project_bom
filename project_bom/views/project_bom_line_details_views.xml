@@ -16,6 +16,7 @@
                     <field name="description"/>
                     <field name="domain_short_description" invisible="1"/>
                     <field name="short_description" readonly="0"/>
+                    <field name="product_qty"/>
                     <field name="product_id" domain="domain_short_description"/>
                     <field name="hw_option" domain="[('is_kits', '=', True)]"/>
 

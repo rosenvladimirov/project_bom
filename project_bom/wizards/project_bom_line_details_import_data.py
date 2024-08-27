@@ -17,4 +17,4 @@ class ProjectBomLineDetailsImportData(models.TransientModel):
     product_id = fields.Many2one('product.product', string='Product')
     description = fields.Char(string='Description')
     error_message = fields.Text(string='Error Message', readonly=True)
-    not_validated = fields.Boolean(string='Not Validated')
+    is_valid = fields.Boolean(string='Not Validated')

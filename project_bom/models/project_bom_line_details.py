@@ -24,6 +24,7 @@ class ProjectBomLineDetails(models.Model):
                                           required=True)
 
     sequence = fields.Integer(string='Sequence', default=10)
+
     final_product_tmpl_id = fields.Many2one('product.template',
                                             string='Final Product Template',
                                             related='project_bom_id.product_tmpl_id')
@@ -51,6 +52,9 @@ class ProjectBomLineDetails(models.Model):
     short_description = fields.Char(string='Technical Description',
                                     related="product_id.short_description",
                                     store=True)
+
+    product_qty = fields.Float(string='Quantity', default=1.0)
+
     domain_short_description = fields.Binary(default=[],
                                              compute="_compute_short_descriptions",
                                              string='Domain Short Description')
