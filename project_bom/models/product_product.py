@@ -9,7 +9,7 @@ class ProductProduct(models.Model):
 
     # CAD additional information
     short_description = fields.Char('Technical Description',
-                                    maxsize=40,
+                                    size=40,
                                     default=lambda self: self.product_tmpl_id.short_description)
     x_coordinate = fields.Float(string='X Coordinate', default=lambda self: self.product_tmpl_id.x_coordinate)
     y_coordinate = fields.Float(string='Y Coordinate', default=lambda self: self.product_tmpl_id.y_coordinate)

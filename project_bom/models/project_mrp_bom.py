@@ -347,6 +347,17 @@ class ProjectMrpBom(models.Model):
             })
             return action
 
+    def action_custom_import_wizard(self):
+        for record in self:
+            action = self.env.ref('project_bom.action_custom_import_wizard')
+            action = action.read()[0]
+            action.update({
+                'context': {
+                    'default_project_bom_id': record.id,
+                },
+            })
+            return action
+
     # def unlink(self):
     #     for record in self:
     #         for operation in record.mapped('project_bom_line_ids').mapped('operation_id'):

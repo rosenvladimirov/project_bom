@@ -37,7 +37,7 @@ class ProductTemplate(models.Model):
         '# Bill of Material',
         compute='_compute_project_bom_count')
     # CAD additional information
-    short_description = fields.Char('Technical Description', maxsize=40)
+    short_description = fields.Char('Technical Description', size=40)
     x_coordinate = fields.Float(string='X Coordinate')
     y_coordinate = fields.Float(string='Y Coordinate')
 
