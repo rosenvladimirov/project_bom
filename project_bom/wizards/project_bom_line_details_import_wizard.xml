@@ -22,7 +22,7 @@
                     <field name="line_details" nolabel="1" invisible="not line_details" can_create="0">
                         <tree string="Project BOM Line Details Import Data"
                               decoration-danger="not is_valid"
-                              decoration-success="is_valid">
+                              decoration-success="is_valid" editable="bottom">
                             <field name="is_valid" column_invisible="1"/>
                             <field name="qty" readonly="1" force_save="1"/>
                             <field name="designator" readonly="1" force_save="1"/>
@@ -30,7 +30,7 @@
                             <field name="description" readonly="1" force_save="1"/>
                             <field name="short_description" readonly="1" force_save="1"/>
                             <field name="product_id" readonly="1" force_save="1"/>
-                            <field name="hw_option" can_create="0" can_write="0"/>
+                            <field name="hw_option" can_create="0" can_write="0" domain="[('is_kits', '=', True)]"/>
                             <field name="error_message" readonly="1" force_save="1"/>
                         </tree>
                     </field>
