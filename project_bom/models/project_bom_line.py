@@ -182,5 +182,5 @@ class ProjectMrpBomLine(models.Model):
             'res_model': 'project.bom.line.details',
             'view_mode': 'tree',
             'target': 'new',
-            'domain': [('product_id', '=', self.project_product_id.id)],
+            'domain': [('project_bom_line_id', '=', self.id)],
         }

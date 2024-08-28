@@ -119,6 +119,7 @@
                                                widget="many2one_barcode"
                                                options="{'no_open': True}"
                                         />
+
                                         <button name="action_open_project_product" type="object" title="View Product Details" string="" class="fa fa-bars"/>
 
                                         <field name="name" widget="section_and_note_text" optional="show"/>
