@@ -71,6 +71,14 @@
                                     <form string="Project for Bill of Material line">
                                         <field name="display_type" invisible="1"/>
                                         <group>
+                                            <group string="Final product">
+                                                <field name="final_product_tmpl_id"/>
+                                                <field name="final_product_id"/>
+                                            </group>
+                                            <group string="Semi product">
+                                                <field name="semi_product_tmpl_id"/>
+                                                <field name="semi_product_id"/>
+                                            </group>
                                             <group string="Product">
                                                 <field name="bom_line_id" invisible="1"/>
                                                 <field name="sequence"/>
@@ -84,8 +92,9 @@
                                                            groups="uom.group_uom"/>
                                                 </div>
                                             </group>
-                                            <field name="version_ids"/>
                                         </group>
+                                        <separator string="Version control"/>
+                                        <field name="version_ids" nolabel="1"/>
                                     </form>
                                     <tree string="Component lines" editable="bottom" limit="200">
                                         <control>
@@ -97,6 +106,11 @@
 
                                         <field name="display_type" column_invisible="1"/>
                                         <field name="bom_line_id" column_invisible="1"/>
+                                        <field name="final_product_tmpl_id" column_invisible="1"/>
+                                        <field name="final_product_id" column_invisible="1"/>
+
+                                        <field name="semi_product_tmpl_id"/>
+                                        <field name="semi_product_tmpl_id"/>
 
                                         <field name="project_product_id"
                                                readonly="id"
@@ -133,7 +147,35 @@
                                 <field name="project_bom_line_details_ids" readonly="1"/>
                             </page>
                             <page string="Grouped data">
-                                <field name="project_bom_group_ids"/>
+                                <field name="project_bom_group_ids">
+                                    <form string="Group data and amount">
+                                        <group>
+                                            <group>
+                                                <field name="project_bom_id" invisible="1"/>
+                                                <field name="product_tmpl_id" can_create="0" can_write="0"/>
+                                                <field name="product_qty"/>
+                                                <field name="forecast_product_qty"/>
+                                                <field name="product_uom_id"/>
+                                                <field name="price_unit"/>
+                                                <field name="avg_price_unit"/>
+                                            </group>
+                                            <grup>
+                                                <field name="partner_id" can_create="0" can_write="0"/>
+                                                <field name="qty_available"/>
+                                                <field name="virtual_available"/>
+                                            </grup>
+                                        </group>
+                                        <field name="description" nolabel="1" placeholder="Write any description"/>
+                                    </form>
+                                    <tree string="Group data and amount" editable="bottom">
+                                        <field name="project_bom_id" column_invisible="1"/>
+                                        <field name="product_tmpl_id" can_create="0" can_write="0"/>
+                                        <field name="product_uom_id"/>
+                                        <field name="product_qty"/>
+                                        <field name="price_unit"/>
+                                        <field name="avg_price_unit"/>
+                                    </tree>
+                                </field>
                                 <group class="oe_subtotal_footer oe_right">
                                     <field name="amount_untaxed"
                                            widget="monetary"
@@ -166,8 +208,8 @@
             <field name="model">project.mrp.bom</field>
             <field name="arch" type="xml">
                 <tree string="Bill of Materials" default_order="product_tmpl_id">
-                    <field name="active" invisible="1"/>
-                    <field name="sequence" invisible="1"/>
+                    <field name="active" column_invisible="1"/>
+                    <field name="sequence" column_invisible="1"/>
                     <field name="task_id"/>
                     <field name="product_tmpl_id"/>
                     <field name="product_id"/>

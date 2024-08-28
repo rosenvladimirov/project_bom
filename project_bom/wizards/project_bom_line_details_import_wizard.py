@@ -19,6 +19,10 @@ class ProjectBomLineImportWizard(models.TransientModel):
     project_bom_id = fields.Many2one('project.mrp.bom', string='Project BOM')
     product_tmpl_id = fields.Many2one('product.template', related="project_bom_id.product_tmpl_id")
     product_id = fields.Many2one('product.product', related="project_bom_id.product_id")
+    semi_product_tmpl_id = fields.Many2one('product.template',
+                                           string='Semi Product Template')
+    semi_product_id = fields.Many2one('product.product',
+                                      string='Semi Product')
 
     def default_get(self, fields_list):
         res = super().default_get(fields_list)
@@ -131,6 +135,9 @@ class ProjectBomLineImportWizard(models.TransientModel):
                 'product_id': line.product_id.id,
                 'product_qty': line.qty,
                 'designator': line.designator,
+                'hw_option': line.hw_option.id,
+                'semi_product_tmpl_id': self.semi_product_tmpl_id.id,
+                'semi_product_id': self.semi_product_id.id,
             })
 
 

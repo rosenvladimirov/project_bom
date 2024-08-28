@@ -14,13 +14,13 @@
                     <field name="used_in_operation"/>
                     <field name="default_code"/>
                     <field name="description"/>
-                    <field name="domain_short_description" invisible="1"/>
+                    <field name="domain_short_description" column_invisible="1"/>
                     <field name="short_description" readonly="0"/>
                     <field name="product_qty"/>
                     <field name="product_id" domain="domain_short_description"/>
                     <field name="hw_option" domain="[('is_kits', '=', True)]"/>
 
-                    <field name="possible_bom_product_template_attribute_value_ids" invisible="1"/>
+                    <field name="possible_bom_product_template_attribute_value_ids" column_invisible="1"/>
                     <field name="bom_product_template_attribute_value_ids"
                            widget="many2many_tags"
                            options="{'no_create': True}"

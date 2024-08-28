@@ -65,7 +65,7 @@ class ProjectMrpBom(models.Model):
                                             'BoM Groups',
                                             copy=False)
     project_bom_line_details_ids = fields.One2many('project.bom.line.details',
-                                                   'project_bom_line_id',
+                                                   'project_bom_id',
                                                    'BoM Line Details')
     task_id = fields.Many2one('project.task', 'Project Task')
     account_analytic_id = fields.Many2one('account.analytic.account', 'Analytic account')

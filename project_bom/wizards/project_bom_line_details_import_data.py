@@ -18,3 +18,5 @@ class ProjectBomLineDetailsImportData(models.TransientModel):
     description = fields.Char(string='Description')
     error_message = fields.Text(string='Error Message', readonly=True)
     is_valid = fields.Boolean(string='Not Validated')
+    hw_option = fields.Many2one('product.product', string='HW Option',
+                                help='Used kit for Project BOM, replacement of component.')
