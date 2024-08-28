@@ -172,3 +172,15 @@ class ProjectMrpBomLine(models.Model):
             if len(project_bom_group_ids) > 0 and not record.project_bom_id.project_bom_line_ids. \
                     filtered(lambda r: r.product_id == record.project_product_id and not r.id == record.id):
                 project_bom_group_ids.unlink()
+
+    def action_open_project_product(self):
+        self.ensure_one()
+        # open popups for project bom line details with the product_id
+        return {
+            'name': _('Project Product'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'project.bom.line.details',
+            'view_mode': 'tree',
+            'target': 'new',
+            'domain': [('project_bom_line_id', '=', self.id)],
+        }
