@@ -41,6 +41,7 @@ class ProjectMrpBomLine(models.Model):
                                   required=True,
                                   ondelete='restrict',
                                   copy=False)
+
     final_product_tmpl_id = fields.Many2one('product.template',
                                             string='Final Product Template',
                                             related='project_bom_id.product_tmpl_id')
@@ -48,6 +49,14 @@ class ProjectMrpBomLine(models.Model):
                                        string='Final Product',
                                        related='project_bom_id.product_id',
                                        )
+
+    semi_product_tmpl_id = fields.Many2one('product.template',
+                                           string='Semi Product Template',
+                                           related='bom_id.product_tmpl_id')
+    semi_product_id = fields.Many2one('product.product',
+                                      string='Semi Product',
+                                      related='bom_id.product_id')
+
     possible_bom_product_template_attribute_value_ids = fields.Many2many(
         related='project_bom_id.possible_product_template_attribute_value_ids')
     bom_product_template_attribute_value_ids = fields.Many2many(
