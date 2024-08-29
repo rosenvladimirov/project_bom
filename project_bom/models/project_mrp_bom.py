@@ -286,7 +286,7 @@ class ProjectMrpBom(models.Model):
                     "product_uom_id": product_tmpl_id.product_uom_id.id,
                 }
             project_bom_group_ids.unlink()
-            if not product_id:
+            if product_id:
                 project_bom_line_ids = record.project_bom_line_ids.filtered(lambda r: r.product_id == product_id)
             else:
                 project_bom_line_ids = record.project_bom_line_ids

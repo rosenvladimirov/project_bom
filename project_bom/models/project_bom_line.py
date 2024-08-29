@@ -39,7 +39,7 @@ class ProjectMrpBomLine(models.Model):
     bom_line_id = fields.Many2one('mrp.bom.line',
                                   'BOM Line',
                                   required=True,
-                                  ondelete='restrict',
+                                  ondelete='cascade',
                                   copy=False)
 
     final_product_tmpl_id = fields.Many2one('product.template',
@@ -172,6 +172,7 @@ class ProjectMrpBomLine(models.Model):
             if len(project_bom_group_ids) > 0 and not record.project_bom_id.project_bom_line_ids. \
                     filtered(lambda r: r.product_id == record.project_product_id and not r.id == record.id):
                 project_bom_group_ids.unlink()
+        return super().unlink()
 
     def action_open_project_product(self):
         self.ensure_one()

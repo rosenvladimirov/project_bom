@@ -110,7 +110,7 @@
                                         <field name="final_product_id" column_invisible="1"/>
 
                                         <field name="semi_product_tmpl_id"/>
-                                        <field name="semi_product_tmpl_id"/>
+                                        <field name="semi_product_id"/>
 
                                         <field name="project_product_id"
                                                readonly="id"
