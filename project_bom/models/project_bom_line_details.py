@@ -2,8 +2,9 @@
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 import logging
 
-from odoo import models, fields, api, _
+from odoo import models, fields, api, _, Command
 from odoo.exceptions import UserError
+from odoo.modules.module import current_test
 
 _logger = logging.getLogger(__name__)
 
@@ -120,75 +121,136 @@ class ProjectBomLineDetails(models.Model):
             else:
                 record.domain_short_description = []
 
-    @api.model_create_multi
-    def create(self, vals_list):
-        for vals in vals_list:
-            if vals.get('semi_product_tmpl_id', False) and vals.get('hw_option', False):
-                raise UserError(_('Semi-product and hardware options cannot be used at the same time'))
-
+    def sterilise_vals(self, vals, current_project_bom_line_id):
+        if not vals.get('project_bom_id'):
+            project_bom_id = self.project_bom_id
+        else:
             project_bom_id = self.env['project.mrp.bom'].browse([vals['project_bom_id']])
-            semi_product_tmpl_id = self.env['product.product'].browse([vals['semi_product_tmpl_id']])
 
-            if vals.get('hw_option', False):
-                hw_option = self.env['product.product'].browse([vals['hw_option']])
-            else:
-                hw_option = self.env['product.product']
+        # Base (final) product in project bom
+        final_product_bom_id = self.env['mrp.bom'].search([
+            ('product_tmpl_id', '=', project_bom_id.product_tmpl_id.id), "|",
+            ('product_id', '=', project_bom_id.product_id.id),
+            ('product_id', '=', False)
+        ])
+        if not final_product_bom_id:
+            final_product_bom_id = self.env['mrp.bom'].create({
+                'product_tmpl_id': project_bom_id.product_tmpl_id.id,
+                'product_id': project_bom_id.product_id.id,
+                'code': _(f"draft_{project_bom_id.code}")
+            })
 
-            bom_id = self.env['mrp.bom'].search([
-                ('product_id', '!=', False),
-                ('product_id', '=', hw_option.id),
-            ])
+        # Semi product
+        semi_product_id = self.env['product.product'].browse([vals['semi_product_id']])
+        semi_product_tmpl_id = self.env['product.template'].browse([vals['semi_product_tmpl_id']])
+        if semi_product_id and not semi_product_tmpl_id:
+            semi_product_tmpl_id = semi_product_id.product_tmpl_id
+        semi_product_bom_id = self.env['mrp.bom'].search([
+            ('product_tmpl_id', '=', semi_product_tmpl_id.id), "|",
+            ('product_id', '=', semi_product_id.id),
+            ('product_id', '=', False)
+        ])
+        if semi_product_tmpl_id and not semi_product_bom_id:
+            semi_product_bom_id = self.env['mrp.bom'].create({
+                'product_tmpl_id': semi_product_tmpl_id.id,
+                'product_id': vals.get('semi_product_id', False),
+                'code': _(f"draft_{project_bom_id.code}")
+            })
 
-            if not bom_id:
-                bom_id = self.env['mrp.bom'].search([
-                    ('product_tmpl_id', '=', vals.get('semi_product_tmpl_id', False)), "|",
-                    ('product_id', '=', vals.get('semi_product_id', False)),
-                    ('product_id', '=', False)
-                ])
+        #  Kits
+        hw_option = self.env['product.product'].browse([vals['hw_option']])
+        hw_option_bom_id = self.env['mrp.bom'].search([
+            ('product_id', '!=', False),
+            ('product_id', '=', hw_option.id),
+        ])
+        if hw_option and not hw_option_bom_id:
+            hw_option_bom_id = self.env['mrp.bom'].create({
+                'product_tmpl_id': hw_option.product_tmpl_id.id,
+                'code': _(f"draft_{project_bom_id.code}")
+            })
 
-            if not bom_id:
-                bom_id = self.env['mrp.bom'].search([
-                    ('product_tmpl_id', '=', project_bom_id.product_tmpl_id.id), "|",
-                    ('product_id', '=', project_bom_id.product_id.id),
-                    ('product_id', '=', False)
-                ])
-
-            if not bom_id:
-                if hw_option:
-                    bom_id = self.env['mrp.bom'].create({
-                        'product_tmpl_id': hw_option.product_tmpl_id.id,
+        if hw_option and semi_product_bom_id:
+            # First to check the kit is included in semi product
+            if semi_product_bom_id:
+                semi_product_bom_line_ids = semi_product_bom_id.mapped('bom_line_ids')
+                semi_product_bom_line_id = semi_product_bom_line_ids.filtered(lambda r: r.product_id == hw_option)
+                if not semi_product_bom_line_id:
+                    semi_product_bom_id.bom_line_ids = [Command.create({
                         'product_id': hw_option.id,
+                        'product_qty': 1.0,
+                    })]
+                else:
+                    semi_product_bom_line_id.write({
+                        'product_qty': semi_product_bom_line_id.product_qty + 1.0,
                     })
-                elif semi_product_tmpl_id:
-                    bom_id = self.env['mrp.bom'].create({
-                        'product_tmpl_id': semi_product_tmpl_id.id,
-                        'product_id': vals.get('semi_product_id', False),
-                    })
-                elif not hw_option:
-                    bom_id = self.env['mrp.bom'].create({
-                        'product_tmpl_id': project_bom_id.product_tmpl_id.id,
-                        'product_id': project_bom_id.product_id.id,
-                    })
-
+            # Next to search for line in project bom
             project_bom_line_id = self.env['project.mrp.bom.line'].search([
-                ('project_bom_id', '=', project_bom_id.id), "|",
+                ('project_bom_id', '=', project_bom_id.id),
+                ('semi_product_tmpl_id', '=', hw_option.product_tmpl_id.id),
+                "|",
+                ('semi_product_id', '=', hw_option.id),
+                ('semi_product_id', '=', False),
+                "|",
                 ('project_product_id', '=', vals['product_id']),
                 ('bom_line_id.product_id', '=', vals['product_id'])
             ])
+            bom_id = hw_option_bom_id
+        elif semi_product_bom_id and not hw_option:
+            project_bom_line_id = self.env['project.mrp.bom.line'].search([
+                ('project_bom_id', '=', project_bom_id.id),
+                ('semi_product_tmpl_id', '=', semi_product_tmpl_id.id),
+                "|",
+                ('semi_product_id', '=', semi_product_id.id),
+                ('semi_product_id', '=', False),
+                "|",
+                ('project_product_id', '=', vals['product_id']),
+                ('bom_line_id.product_id', '=', vals['product_id'])
+            ])
+            bom_id = semi_product_bom_id
+        else:
+            project_bom_line_id = self.env['project.mrp.bom.line'].search([
+                ('project_bom_id', '=', project_bom_id.id),
+                ('product_tmpl_id', '=', project_bom_id.product_tmpl_id.id),
+                "|",
+                ('product_id', '=', project_bom_id.product_id.id),
+                ('product_id', '=', False),
+                "|",
+                ('project_product_id', '=', vals['product_id']),
+                ('bom_line_id.product_id', '=', vals['product_id'])
+            ])
+            bom_id = final_product_bom_id
 
-            if not project_bom_line_id:
-                project_bom_line_id = self.env['project.mrp.bom.line'].create({
-                    'project_product_id': vals['product_id'],
-                    'project_bom_id': vals['project_bom_id'],
-                    'product_id': vals['product_id'],
-                    'bom_id': bom_id.id,
-                })
-            else:
-                project_bom_line_id.write({
-                    'project_product_qty': project_bom_line_id.project_product_qty + 1.0,
-                    'bom_id': bom_id.id,
-                })
-            vals['project_bom_line_id'] = project_bom_line_id.id
+        if current_project_bom_line_id and current_project_bom_line_id != project_bom_line_id:
+            current_project_bom_line_id.unlink()
+            current_project_bom_line_id = self.env['project.mrp.bom.line']
+
+        if current_project_bom_line_id and project_bom_line_id == current_project_bom_line_id:
+            current_project_bom_line_id.write({
+                'project_product_qty': current_project_bom_line_id.project_product_qty + 1.0,
+            })
+        elif not project_bom_line_id:
+            project_bom_line_id = self.env['project.mrp.bom.line'].create({
+                'project_bom_id': project_bom_id.id,
+                'semi_product_tmpl_id': hw_option and hw_option.product_tmpl_id.id or semi_product_tmpl_id and semi_product_tmpl_id.id or project_bom_id.product_tmpl_id.id,
+                'semi_product_id': hw_option and hw_option.id or semi_product_id and semi_product_id.id or project_bom_id.product_id.id,
+                'project_product_id': vals['product_id'],
+                'product_id': vals['product_id'],
+                'bom_id': bom_id.id,
+            })
+
+        else:
+            project_bom_line_id.write({
+                'project_product_qty': project_bom_line_id.project_product_qty + 1.0,
+                'product_qty': project_bom_line_id.product_qty + 1.0,
+                'bom_id': bom_id.id,
+            })
+        vals['project_bom_line_id'] = project_bom_line_id.id
+        return vals
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            self.sterilise_vals(vals, self.env['project.mrp.bom.line'])
 
         res = super().create(vals_list)
         for record, vals in zip(res, vals_list):
@@ -196,14 +258,7 @@ class ProjectBomLineDetails(models.Model):
         return res
 
     def write(self, vals):
-        res = super().write(vals)
-        if vals.get('product_id', False):
-            for record in self:
-                product_qty = sum(record.project_bom_line_id.mapped('project_product_qty'))
-                record.project_bom_line_id.write({
-                    'project_product_qty': product_qty,
-                })
-        return res
+        return super().write(self.sterilise_vals(vals, self))
 
     def unlink(self):
         for record in self:
