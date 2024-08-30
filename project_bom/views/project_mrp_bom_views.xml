@@ -102,7 +102,9 @@
                                         <field name="final_product_tmpl_id" column_invisible="1"/>
                                         <field name="final_product_id" column_invisible="1"/>
 
-                                        <field name="approve"/>
+                                        <field name="approve" column_invisible="1"/>
+                                        <field name="version_ids" column_invisible="0"/>
+
                                         <field name="semi_product_tmpl_id"/>
                                         <field name="semi_product_id"/>
 
@@ -118,6 +120,25 @@
                                                 type="object" title="View Product Details"
                                                 string=""
                                                 class="fa fa-bars"/>
+
+                                        <button name="action_open_versions"
+                                                type="object" title="View Versions"
+                                                string=""
+                                                column_invisible="not version_ids"
+                                                class="fa fa-code-fork"/>
+
+                                        <button name="action_approve"
+                                                type="object" title="Approve component for final use"
+                                                string=""
+                                                class="fa fa-thumbs-o-up"
+                                                column_invisible="approve"
+                                                context="{'force_approve': True}"/>
+                                        <button name="action_undo"
+                                                type="object" title="Approve component for final use"
+                                                string=""
+                                                class="fa fa-thumbs-o-down"
+                                                column_invisible="not approve"
+                                                context="{'force_approve': False}"/>
 
                                         <field name="name" optional="show"/>
                                         <field name="project_product_uom_category_id" column_invisible="1"/>

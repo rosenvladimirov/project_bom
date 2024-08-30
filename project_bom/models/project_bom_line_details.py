@@ -234,9 +234,8 @@ class ProjectBomLineDetails(models.Model):
             bom_id = final_product_bom_id
 
         if current_project_bom_line_id and current_project_bom_line_id != project_bom_line_id:
-            current_project_bom_line_id.unlink()
-            current_project_bom_line_id = self.env['project.mrp.bom.line']
-
+            current_project_bom_line_id.project_product_qty -= 1.0
+            # current_project_bom_line_id = self.env['project.mrp.bom.line']
         if current_project_bom_line_id and project_bom_line_id == current_project_bom_line_id:
             current_project_bom_line_id.write({
                 'project_product_qty': current_project_bom_line_id.project_product_qty + 1.0,
