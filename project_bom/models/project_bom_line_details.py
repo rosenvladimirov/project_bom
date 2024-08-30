@@ -248,7 +248,7 @@ class ProjectBomLineDetails(models.Model):
                 'semi_product_id': hw_option and hw_option.id or semi_product_id and semi_product_id.id or False,
                 'project_product_id': vals['product_id'],
                 'product_id': vals['product_id'],
-                'name': vals['description'],
+                # 'name': vals.get('description', ''),
                 'bom_id': bom_id.id,
             })
 
