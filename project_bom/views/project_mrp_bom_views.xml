@@ -69,7 +69,6 @@
                                        widget="section_and_note_one2many"
                                        mode="tree,kanban">
                                     <form string="Project for Bill of Material line">
-                                        <field name="display_type" invisible="1"/>
                                         <group>
                                             <group string="Final product">
                                                 <field name="final_product_tmpl_id"/>
