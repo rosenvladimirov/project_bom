@@ -119,6 +119,11 @@
                                                 string=""
                                                 class="fa fa-bars"/>
 
+                                        <button name="action_open_versions"
+                                                type="object" title="View Versions"
+                                                string=""
+                                                class="fa fa-code-fork"/>
+
                                         <field name="name" optional="show"/>
                                         <field name="project_product_uom_category_id" column_invisible="1"/>
                                         <field name="project_product_qty"/>

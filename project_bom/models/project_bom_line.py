@@ -183,3 +183,14 @@ class ProjectMrpBomLine(models.Model):
             'target': 'new',
             'domain': [('project_bom_line_id', '=', self.id)],
         }
+
+    def action_open_versions(self):
+        self.ensure_one()
+        return {
+            'name': _('Versions'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'project.mrp.bom.line.version',
+            'view_mode': 'tree',
+            'target': 'new',
+            'domain': [('bom_line_id', '=', self.id)],
+        }
