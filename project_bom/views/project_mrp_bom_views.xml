@@ -130,13 +130,13 @@
                                         <button name="action_approve"
                                                 type="object" title="Approve component for final use"
                                                 string=""
-                                                class="fa fa-thumbs-o-up"
+                                                class="fa fa-thumbs-o-down"
                                                 column_invisible="approve"
                                                 context="{'force_approve': True}"/>
                                         <button name="action_undo"
                                                 type="object" title="Approve component for final use"
                                                 string=""
-                                                class="fa fa-thumbs-o-down"
+                                                class="fa fa-thumbs-o-up"
                                                 column_invisible="not approve"
                                                 context="{'force_approve': False}"/>
 
