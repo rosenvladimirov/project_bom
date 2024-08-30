@@ -1,0 +1,12 @@
+<odoo>
+    <data>
+        <record id="view_project_mrp_bom_line_version_tree" model="ir.ui.view">
+            <field name="name">project.mrp.bom.line.version.tree</field>
+            <field name="model">project.mrp.bom.line.version</field>
+            <field name="arch" type="xml">
+                <tree string="Project BOM line version" editable="top">
+                </tree>
+            </field>
+        </record>
+    </data>
+</odoo>

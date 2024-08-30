@@ -9,8 +9,10 @@
                     <field name="project_bom_id" column_invisible="not context.get('show_project_bom_id')"/>
                     <field name="project_bom_line_id" column_invisible="1"/>
                     <field name="designator"/>
-                    <field name="final_product_tmpl_id" string="Used in product template" readonly="0"/>
-                    <field name="final_product_id" string="Used in product variant" readonly="0"/>
+                    <field name="final_product_tmpl_id" string="Master product template" readonly="0"/>
+                    <field name="final_product_id" string="Master product variant" readonly="0"/>
+                    <field name="semi_product_tmpl_id" string="Used in product template"/>
+                    <field name="semi_product_id" string="Used in product variant"/>
                     <field name="used_in_operation"/>
                     <field name="default_code"/>
                     <field name="description"/>

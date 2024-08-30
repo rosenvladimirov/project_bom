@@ -97,47 +97,42 @@
                                         <field name="version_ids" nolabel="1"/>
                                     </form>
                                     <tree string="Component lines" editable="bottom" limit="200">
-                                        <control>
-                                            <create name="add_product_control" string="Add a product"/>
-                                            <create name="add_operation_control" string="Add a operation" context="{'default_display_type': 'line_operation'}"/>
-                                            <create name="add_note_control" string="Add a note" context="{'default_display_type': 'line_note'}"/>
-                                        </control>
                                         <field name="sequence" widget="handle"/>
 
-                                        <field name="display_type" column_invisible="1"/>
                                         <field name="bom_line_id" column_invisible="1"/>
                                         <field name="final_product_tmpl_id" column_invisible="1"/>
                                         <field name="final_product_id" column_invisible="1"/>
 
+                                        <field name="approve"/>
                                         <field name="semi_product_tmpl_id"/>
-                                        <field name="semi_product_tmpl_id"/>
+                                        <field name="semi_product_id"/>
 
                                         <field name="project_product_id"
                                                readonly="id"
-                                               required="not display_type"
-                                               force_save="1"
                                                widget="many2one_barcode"
-                                               options="{'no_open': True}"
-                                        />
+                                               options="{'no_open': True}"/>
+                                        <field name="product_id"
+                                               optional="hide"
+                                               options="{'no_open': True}"/>
 
-                                        <button name="action_open_project_product" type="object" title="View Product Details" string="" class="fa fa-bars"/>
+                                        <button name="action_open_project_product"
+                                                type="object" title="View Product Details"
+                                                string=""
+                                                class="fa fa-bars"/>
 
-                                        <field name="name" widget="section_and_note_text" optional="show"/>
+                                        <field name="name" optional="show"/>
                                         <field name="project_product_uom_category_id" column_invisible="1"/>
                                         <field name="project_product_qty"/>
                                         <field name="project_product_uom_id"
-                                               force_save="1"
                                                string="UoM"
                                                context="{'company_id': parent.company_id}"
                                                groups="uom.group_uom"
-                                               required="not display_type"
                                                options='{"no_open": True}'
                                                optional="show"/>
                                         <field name="project_operation_id"
-                                               force_save="1"
-                                               groups="mrp.group_mrp_routings"
-                                               required="display_type == 'line_operation'"/>
-                                        <field name="company_id"/>
+                                               optional="show"
+                                               groups="mrp.group_mrp_routings"/>
+                                        <field name="company_id" column_invisible="1"/>
                                         <field name="project_allowed_operation_ids" column_invisible="1"/>
                                     </tree>
                                 </field>

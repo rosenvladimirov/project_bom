@@ -122,6 +122,10 @@ class ProjectBomLineDetails(models.Model):
                 record.domain_short_description = []
 
     def sterilise_vals(self, vals, current_project_bom_line_id):
+        if not vals:
+            return vals
+
+        _logger.info(f"Values: {vals}")
         if not vals.get('project_bom_id'):
             project_bom_id = self.project_bom_id
         else:
@@ -134,6 +138,7 @@ class ProjectBomLineDetails(models.Model):
             ('product_id', '=', False)
         ])
         if not final_product_bom_id:
+            _logger.info(f"# Base (final) product in project bom: {project_bom_id.product_tmpl_id}")
             final_product_bom_id = self.env['mrp.bom'].create({
                 'product_tmpl_id': project_bom_id.product_tmpl_id.id,
                 'product_id': project_bom_id.product_id.id,
@@ -141,33 +146,44 @@ class ProjectBomLineDetails(models.Model):
             })
 
         # Semi product
-        semi_product_id = self.env['product.product'].browse([vals['semi_product_id']])
-        semi_product_tmpl_id = self.env['product.template'].browse([vals['semi_product_tmpl_id']])
-        if semi_product_id and not semi_product_tmpl_id:
-            semi_product_tmpl_id = semi_product_id.product_tmpl_id
-        semi_product_bom_id = self.env['mrp.bom'].search([
-            ('product_tmpl_id', '=', semi_product_tmpl_id.id), "|",
-            ('product_id', '=', semi_product_id.id),
-            ('product_id', '=', False)
-        ])
-        if semi_product_tmpl_id and not semi_product_bom_id:
-            semi_product_bom_id = self.env['mrp.bom'].create({
-                'product_tmpl_id': semi_product_tmpl_id.id,
-                'product_id': vals.get('semi_product_id', False),
-                'code': _(f"draft_{project_bom_id.code}")
-            })
+        semi_product_tmpl_id = self.env['product.template']
+        semi_product_id = self.env['product.product']
+        semi_product_bom_id = self.env['mrp.bom']
+        if vals.get('semi_product_tmpl_id', False) or vals.get('semi_product_id', False):
+            if vals.get('semi_product_id', False):
+                semi_product_id = self.env['product.product'].browse(vals['semi_product_id'])
+            if vals.get('semi_product_tmpl_id', False):
+                semi_product_tmpl_id = self.env['product.template'].browse(vals['semi_product_tmpl_id'])
+            if semi_product_id and not semi_product_tmpl_id:
+                semi_product_tmpl_id = semi_product_id.product_tmpl_id
+            semi_product_bom_id = self.env['mrp.bom'].search([
+                ('product_tmpl_id', '=', semi_product_tmpl_id.id), "|",
+                ('product_id', '=', semi_product_id.id),
+                ('product_id', '=', False)
+            ])
+            if semi_product_tmpl_id and not semi_product_bom_id:
+                _logger.info(f"# Semi product: {semi_product_tmpl_id}")
+                semi_product_bom_id = self.env['mrp.bom'].create({
+                    'product_tmpl_id': semi_product_tmpl_id.id,
+                    'product_id': vals.get('semi_product_id', False),
+                    'code': _(f"draft_{project_bom_id.code}")
+                })
 
         #  Kits
-        hw_option = self.env['product.product'].browse([vals['hw_option']])
-        hw_option_bom_id = self.env['mrp.bom'].search([
-            ('product_id', '!=', False),
-            ('product_id', '=', hw_option.id),
-        ])
-        if hw_option and not hw_option_bom_id:
-            hw_option_bom_id = self.env['mrp.bom'].create({
-                'product_tmpl_id': hw_option.product_tmpl_id.id,
-                'code': _(f"draft_{project_bom_id.code}")
-            })
+        hw_option = self.env['product.product']
+        hw_option_bom_id = self.env['mrp.bom']
+        if vals.get('hw_option', False):
+            hw_option = self.env['product.product'].browse(vals.get['hw_option'])
+            hw_option_bom_id = self.env['mrp.bom'].search([
+                ('product_id', '!=', False),
+                ('product_id', '=', hw_option.id),
+            ])
+            if hw_option and not hw_option_bom_id:
+                _logger.info(f"# Kits: {hw_option}")
+                hw_option_bom_id = self.env['mrp.bom'].create({
+                    'product_tmpl_id': hw_option.product_tmpl_id.id,
+                    'code': _(f"draft_{project_bom_id.code}")
+                })
 
         if hw_option and semi_product_bom_id:
             # First to check the kit is included in semi product
@@ -210,10 +226,7 @@ class ProjectBomLineDetails(models.Model):
         else:
             project_bom_line_id = self.env['project.mrp.bom.line'].search([
                 ('project_bom_id', '=', project_bom_id.id),
-                ('product_tmpl_id', '=', project_bom_id.product_tmpl_id.id),
-                "|",
-                ('product_id', '=', project_bom_id.product_id.id),
-                ('product_id', '=', False),
+                ('semi_product_tmpl_id', '=', False),
                 "|",
                 ('project_product_id', '=', vals['product_id']),
                 ('bom_line_id.product_id', '=', vals['product_id'])
@@ -231,10 +244,11 @@ class ProjectBomLineDetails(models.Model):
         elif not project_bom_line_id:
             project_bom_line_id = self.env['project.mrp.bom.line'].create({
                 'project_bom_id': project_bom_id.id,
-                'semi_product_tmpl_id': hw_option and hw_option.product_tmpl_id.id or semi_product_tmpl_id and semi_product_tmpl_id.id or project_bom_id.product_tmpl_id.id,
-                'semi_product_id': hw_option and hw_option.id or semi_product_id and semi_product_id.id or project_bom_id.product_id.id,
+                'semi_product_tmpl_id': hw_option and hw_option.product_tmpl_id.id or semi_product_tmpl_id and semi_product_tmpl_id.id or False,
+                'semi_product_id': hw_option and hw_option.id or semi_product_id and semi_product_id.id or False,
                 'project_product_id': vals['product_id'],
                 'product_id': vals['product_id'],
+                'name': vals['description'],
                 'bom_id': bom_id.id,
             })
 
@@ -263,11 +277,7 @@ class ProjectBomLineDetails(models.Model):
     def unlink(self):
         for record in self:
             project_bom_line_ids = record.project_bom_id.project_bom_line_ids.\
-                filtered(lambda r: r.product_id == record.product_id)
+                filtered(lambda r: r == record.project_bom_line_id)
             if len(project_bom_line_ids) == 1:
                 project_bom_line_ids.unlink()
-                project_group_ids = record.project_bom_id.project_bom_group_ids. \
-                    filtered(lambda r: r.product_tmpl_id.id == record.product_id.product_tmpl_id.id)
-                if len(project_group_ids) > 0:
-                    project_group_ids.unlink()
         return super().unlink()
