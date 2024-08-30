@@ -27,12 +27,7 @@ class ProjectMrpBomLine(models.Model):
                                      index=True,
                                      ondelete='cascade',
                                      required=True)
-    display_type = fields.Selection(
-        selection=[
-            ('line_operation', "Operation"),
-            ('line_note', "Note"),
-        ],
-        default=False)
+
     company_id = fields.Many2one('res.company',
                                  related='project_bom_id.company_id',
                                  store=True)
@@ -102,16 +97,19 @@ class ProjectMrpBomLine(models.Model):
             ])
             record.project_allowed_operation_ids = [Command.set(project_allowed_operation_ids)]
 
-    def action_approve(self, product_id):
+    def action_approve(self):
         for record in self:
             if isinstance(record.id, NewId):
                 break
+            if self._context.get('force_approve'):
+                record.approve = True
+
             project_bom_id = record.project_bom_id
             version = self.env['project.mrp.bom.line.version'].search([
                 ('bom_line_id', '=', record.id), ('version', '=', project_bom_id.version)
             ])
             if record.approve:
-                if record.project_product_id.id != product_id:
+                if record.project_product_id.id != record.product_id:
                     change_product_id = record.project_bom_id.project_bom_line_ids.\
                         filtered(lambda r: r.project_product_id == record.project_product_id
                                            and r.project_operation_id == record.project_operation_id)
