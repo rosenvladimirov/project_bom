@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 import base64
+import logging
 
 from odoo import models, fields, _
 from odoo.exceptions import UserError
+_logger = logging.getLogger(__name__)
 
 
 class ProjectBomLineImportWizard(models.TransientModel):
@@ -75,9 +77,15 @@ class ProjectBomLineImportWizard(models.TransientModel):
                 raise UserError(result_parse['error'])
 
             opts = result_parse['options']
+            for header in result_parse['headers']:
+                _logger.info("Header: %s", header)
+                if header not in ['qty', 'MecID', 'description', 'manufacturer', 'MPN',
+                                  'opt', 'mounted', 'package', 'RefDes', 'notes', 'ss', 'side']:
+                    # raise UserError(_('Unsupported column name %s') % header)
+                    pass
             results = import_wizard.execute_import(
-                ['qty', 'default_code', 'short_description', 'description', False, False, False, False, False,
-                 'designator', False, False, False, False],
+                ['qty', 'default_code', 'short_description', 'description', False, False,
+                 'short_description_option', False, False, 'designator', False, False, False, False],
                 [],
                 {**opts}
             )
@@ -99,6 +107,7 @@ class ProjectBomLineImportWizard(models.TransientModel):
                         'default_code': import_line.default_code,
                         'short_description': import_line.short_description,
                         'description': import_line.description,
+                        'short_description_option': import_line.short_description_option,
                         'designator': designator,
                         'import_id': self.id
                     })
@@ -108,6 +117,7 @@ class ProjectBomLineImportWizard(models.TransientModel):
                         'default_code': import_line.default_code,
                         'short_description': import_line.short_description,
                         'description': import_line.description,
+                        'short_description_option': import_line.short_description_option,
                         'import_id': self.id
                     })
             import_data.unlink()
@@ -174,6 +184,18 @@ class ProjectBomLineImportWizard(models.TransientModel):
                     line.product_id = found_products[0].id
                     error_message.append(
                         _(f"{len(found_products) > 1 and 'To many products found with some technical description or default code' or ''}"))
+            if line.short_description_option and not line.short_description_option != '_':
+                found_products = self.env['product.product'].search([
+                    ('short_description', '=', line.short_description_option),
+                ])
+                if found_products:
+                    line.hw_option = found_products[0].id
+                    error_message.append(
+                        _(f"{len(found_products) > 1 and 'To many kits found with some hw option description' or ''}"))
+                else:
+                    error_message.append(_('Product not found. The hw option description '
+                                           'are not matching any kit product.'))
+                    line_valid = False
 
             line.write({
                 'is_valid': line_valid,

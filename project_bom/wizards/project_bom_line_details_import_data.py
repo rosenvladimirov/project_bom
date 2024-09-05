@@ -14,6 +14,7 @@ class ProjectBomLineDetailsImportData(models.TransientModel):
     designator = fields.Char(string='Designator')
     default_code = fields.Char(string='Internal reference')
     short_description = fields.Char(string='Technical Description')
+    short_description_option = fields.Char(string='Option Description')
     product_id = fields.Many2one('product.product', string='Product')
     description = fields.Char(string='Description')
     error_message = fields.Text(string='Error Message', readonly=True)

@@ -136,7 +136,7 @@ class ProjectBomLineDetails(models.Model):
             ('product_tmpl_id', '=', project_bom_id.product_tmpl_id.id), "|",
             ('product_id', '=', project_bom_id.product_id.id),
             ('product_id', '=', False)
-        ])
+        ], limit=1)
         if not final_product_bom_id:
             _logger.info(f"# Base (final) product in project bom: {project_bom_id.product_tmpl_id}")
             final_product_bom_id = self.env['mrp.bom'].create({
@@ -160,7 +160,7 @@ class ProjectBomLineDetails(models.Model):
                 ('product_tmpl_id', '=', semi_product_tmpl_id.id), "|",
                 ('product_id', '=', semi_product_id.id),
                 ('product_id', '=', False)
-            ])
+            ], limit=1)
             if semi_product_tmpl_id and not semi_product_bom_id:
                 _logger.info(f"# Semi product: {semi_product_tmpl_id}")
                 semi_product_bom_id = self.env['mrp.bom'].create({
@@ -177,7 +177,7 @@ class ProjectBomLineDetails(models.Model):
             hw_option_bom_id = self.env['mrp.bom'].search([
                 ('product_id', '!=', False),
                 ('product_id', '=', hw_option.id),
-            ])
+            ], limit=1)
             if hw_option and not hw_option_bom_id:
                 _logger.info(f"# Kits: {hw_option}")
                 hw_option_bom_id = self.env['mrp.bom'].create({
@@ -209,7 +209,7 @@ class ProjectBomLineDetails(models.Model):
                 "|",
                 ('project_product_id', '=', vals['product_id']),
                 ('bom_line_id.product_id', '=', vals['product_id'])
-            ])
+            ], limit=1)
             bom_id = hw_option_bom_id
         elif semi_product_bom_id and not hw_option:
             project_bom_line_id = self.env['project.mrp.bom.line'].search([
@@ -221,16 +221,20 @@ class ProjectBomLineDetails(models.Model):
                 "|",
                 ('project_product_id', '=', vals['product_id']),
                 ('bom_line_id.product_id', '=', vals['product_id'])
-            ])
+            ], limit=1)
             bom_id = semi_product_bom_id
         else:
             project_bom_line_id = self.env['project.mrp.bom.line'].search([
                 ('project_bom_id', '=', project_bom_id.id),
                 ('semi_product_tmpl_id', '=', False),
+                ('final_product_tmpl_id', '=', final_product_bom_id.product_tmpl_id.id),
+                "|",
+                ('final_product_id', '=', final_product_bom_id.product_id.id),
+                ('final_product_id', '=', False),
                 "|",
                 ('project_product_id', '=', vals['product_id']),
                 ('bom_line_id.product_id', '=', vals['product_id'])
-            ])
+            ], limit=1)
             bom_id = final_product_bom_id
 
         if current_project_bom_line_id and current_project_bom_line_id.project_bom_line_id != project_bom_line_id:
@@ -246,6 +250,8 @@ class ProjectBomLineDetails(models.Model):
         elif not project_bom_line_id:
             project_bom_line_id = self.env['project.mrp.bom.line'].create({
                 'project_bom_id': project_bom_id.id,
+                'final_product_tmpl_id': not hw_option and not semi_product_tmpl_id and final_product_bom_id.product_tmpl_id.id or False,
+                'final_product_id': not hw_option and not semi_product_tmpl_id and final_product_bom_id.product_id.id or False,
                 'semi_product_tmpl_id': hw_option and hw_option.product_tmpl_id.id or semi_product_tmpl_id and semi_product_tmpl_id.id or False,
                 'semi_product_id': hw_option and hw_option.id or semi_product_id and semi_product_id.id or False,
                 'project_product_id': vals['product_id'],
@@ -256,6 +262,8 @@ class ProjectBomLineDetails(models.Model):
 
         else:
             project_bom_line_id.write({
+                'semi_product_tmpl_id': hw_option and hw_option.product_tmpl_id.id or semi_product_tmpl_id and semi_product_tmpl_id.id or False,
+                'semi_product_id': hw_option and hw_option.id or semi_product_id and semi_product_id.id or False,
                 'project_product_qty': project_bom_line_id.project_product_qty + 1.0,
                 'product_qty': project_bom_line_id.product_qty + 1.0,
                 'bom_id': bom_id.id,

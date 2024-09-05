@@ -30,6 +30,7 @@
                             <field name="description" readonly="1" force_save="1"/>
                             <field name="short_description" readonly="1" force_save="1"/>
                             <field name="product_id" readonly="1" force_save="1"/>
+                            <field name="short_description_option" readonly="1" force_save="1"/>
                             <field name="hw_option" can_create="0" can_write="0" domain="[('is_kits', '=', True)]"/>
                             <field name="error_message" readonly="1" force_save="1"/>
                         </tree>
