@@ -8,10 +8,19 @@ from odoo.modules.module import current_test
 
 _logger = logging.getLogger(__name__)
 
+TYPES_SELECTION = [
+    ('normal', 'Normal'),
+    ('bom', 'Bill of materials'),
+    ('kit', 'Kit'),
+]
+
 
 class ProjectBomLineDetails(models.Model):
     _name = 'project.bom.line.details'
     _description = 'Project BOM line details (CAD data file)'
+
+    def _get_type_used_detail(self):
+        return TYPES_SELECTION
 
     project_bom_id = fields.Many2one('project.mrp.bom',
                                      'Parent Project BOM',
@@ -33,8 +42,9 @@ class ProjectBomLineDetails(models.Model):
                                        string='Final Product',
                                        related='project_bom_id.product_id',
                                        )
-    possible_bom_product_template_attribute_value_ids = fields.Many2many(
-        related='project_bom_id.possible_product_template_attribute_value_ids')
+    possible_product_template_attribute_value_ids = fields.Many2many(
+        'product.template.attribute.value',
+        compute='_compute_possible_product_template_attribute_value_ids')
     bom_product_template_attribute_value_ids = fields.Many2many(
         'product.template.attribute.value', string="Apply on Variants", ondelete='restrict',
         domain="[('id', 'in', possible_bom_product_template_attribute_value_ids)]",
@@ -66,12 +76,7 @@ class ProjectBomLineDetails(models.Model):
 
     description = fields.Char(string='Description', related='product_id.display_name', store=True)
 
-    type = fields.Selection([
-        ('bom', 'BOM'),
-        ('lot', 'Lot'),
-        ('kit', 'Kit'),
-    ], string='Type'
-    )
+    type = fields.Selection(selection='_get_type_used_detail', string='Type', default='normal')
     used_in_operation = fields.Char(string='Used In Operation')
 
     # Additional fields for EuroPlacer CAD compatibility
@@ -120,6 +125,16 @@ class ProjectBomLineDetails(models.Model):
                     record.domain_short_description = []
             else:
                 record.domain_short_description = []
+
+    @api.depends(
+        'semi_product_tmpl_id.attribute_line_ids.value_ids',
+        'semi_product_tmpl_id.attribute_line_ids.attribute_id.create_variant',
+        'semi_product_tmpl_id.attribute_line_ids.product_template_value_ids.ptav_active',
+    )
+    def _compute_possible_product_template_attribute_value_ids(self):
+        for record in self.filtered(lambda r: r.semi_product_tmpl_id):
+            record.possible_product_template_attribute_value_ids = record.semi_product_tmpl_id.valid_product_template_attribute_line_ids._without_no_variant_attributes().product_template_value_ids._only_active()
+
 
     def sterilise_vals(self, vals, current_project_bom_line_id):
         if not vals:

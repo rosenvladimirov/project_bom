@@ -3,9 +3,27 @@
 import base64
 import logging
 
-from odoo import models, fields, _
+from odoo import models, fields, _, Command
 from odoo.exceptions import UserError
 _logger = logging.getLogger(__name__)
+
+HEADER_FIELDS = {
+    'qty': 'qty',
+    'ArtID': 'default_code',
+    'MecID': 'short_description',
+    'description': 'description',
+    'manufacturer': False,
+    'MPN': False,
+    'Semi product': False,
+    'opt': 'short_description_option',
+    'mounted': False,
+    'package': False,
+    'RefDes': 'designator',
+    'notes': False,
+    'ss': False,
+    'side': False,
+    'type': 'type',
+}
 
 
 class ProjectBomLineImportWizard(models.TransientModel):
@@ -35,6 +53,11 @@ class ProjectBomLineImportWizard(models.TransientModel):
             res['product_tmpl_id'] = project_bom_id.product_tmpl_id.id
             res['product_id'] = project_bom_id.product_id.id
         return res
+
+    def onchange_semi_product_tmpl_id(self):
+        if self.semi_product_tmpl_id:
+            self._validate_data()
+        return {}
 
     def action_upload(self):
         self.ensure_one()
@@ -77,18 +100,17 @@ class ProjectBomLineImportWizard(models.TransientModel):
                 raise UserError(result_parse['error'])
 
             opts = result_parse['options']
+            import_header = []
             for header in result_parse['headers']:
                 _logger.info("Header: %s", header)
-                if header not in ['qty', 'MecID', 'description', 'manufacturer', 'MPN',
-                                  'opt', 'mounted', 'package', 'RefDes', 'notes', 'ss', 'side']:
-                    # raise UserError(_('Unsupported column name %s') % header)
-                    pass
-            results = import_wizard.execute_import(
-                ['qty', 'default_code', 'short_description', 'description', False, False,
-                 'short_description_option', False, False, 'designator', False, False, False, False],
-                [],
-                {**opts}
-            )
+                import_header.append(HEADER_FIELDS.get(header, False))
+            # ['qty', 'default_code', 'short_description', 'description', False, False,
+            #  'short_description_option', False, False, 'designator', False, False, False, False]
+            _logger.info("Import Header: %s", import_header)
+            if not import_header:
+                raise UserError('No header fields found. Please make sure the header '
+                                'row is not hidden and all columns are populated.')
+            results = import_wizard.execute_import(import_header,[],{**opts})
 
             if results.get('messages'):
                 message = ''
@@ -100,7 +122,7 @@ class ProjectBomLineImportWizard(models.TransientModel):
             import_data = self.env['project.bom.line.details.import.data'].browse(results['ids'])
             # Check for designators and add import_id
             for import_line in import_data:
-                designator_import_lines = import_line.designator.split(',')
+                designator_import_lines = import_line.designator and import_line.designator.split(',') or []
                 for designator in designator_import_lines:
                     new_import_data.create({
                         'qty': import_line.qty / len(designator_import_lines),
@@ -146,10 +168,10 @@ class ProjectBomLineImportWizard(models.TransientModel):
                 'product_qty': line.qty,
                 'designator': line.designator,
                 'hw_option': line.hw_option.id,
+                'bom_product_template_attribute_value_ids': [Command.set(line.possible_product_template_attribute_value_ids.ids)],
                 'semi_product_tmpl_id': self.semi_product_tmpl_id.id,
                 'semi_product_id': self.semi_product_id.id,
             })
-
 
     def _validate_data(self):
         is_valid = True
@@ -184,7 +206,7 @@ class ProjectBomLineImportWizard(models.TransientModel):
                     line.product_id = found_products[0].id
                     error_message.append(
                         _(f"{len(found_products) > 1 and 'To many products found with some technical description or default code' or ''}"))
-            if line.short_description_option and not line.short_description_option != '_':
+            if line.short_description_option and not line.short_description_option != '_' and line.type == 'kit':
                 found_products = self.env['product.product'].search([
                     ('short_description', '=', line.short_description_option),
                 ])
@@ -195,6 +217,16 @@ class ProjectBomLineImportWizard(models.TransientModel):
                 else:
                     error_message.append(_('Product not found. The hw option description '
                                            'are not matching any kit product.'))
+                    line_valid = False
+            elif line.short_description_option and not line.short_description_option != '_' and line.type == 'normal':
+                possible_product_template_attribute_value_ids = line.possible_product_template_attribute_value_ids.mapped('name')
+                if line.short_description_option in possible_product_template_attribute_value_ids:
+                    bom_product_template_attribute_value_ids = line.possible_product_template_attribute_value_ids. \
+                        filtered(lambda r: r.name == line.short_description_option)
+                    line.bom_product_template_attribute_value_ids = \
+                        [Command.set(bom_product_template_attribute_value_ids.ids)]
+                else:
+                    error_message.append(_('Attribute value not found. The hw option is wrong'))
                     line_valid = False
 
             line.write({
