@@ -8,10 +8,19 @@ from odoo.modules.module import current_test
 
 _logger = logging.getLogger(__name__)
 
+TYPES_SELECTION = [
+    ('normal', 'Normal'),
+    ('bom', 'Bill of materials'),
+    ('kit', 'Kit'),
+]
+
 
 class ProjectBomLineDetails(models.Model):
     _name = 'project.bom.line.details'
     _description = 'Project BOM line details (CAD data file)'
+
+    def _get_type_used_detail(self):
+        return TYPES_SELECTION
 
     project_bom_id = fields.Many2one('project.mrp.bom',
                                      'Parent Project BOM',
@@ -33,8 +42,9 @@ class ProjectBomLineDetails(models.Model):
                                        string='Final Product',
                                        related='project_bom_id.product_id',
                                        )
-    possible_bom_product_template_attribute_value_ids = fields.Many2many(
-        related='project_bom_id.possible_product_template_attribute_value_ids')
+    possible_product_template_attribute_value_ids = fields.Many2many(
+        'product.template.attribute.value',
+        compute='_compute_possible_product_template_attribute_value_ids')
     bom_product_template_attribute_value_ids = fields.Many2many(
         'product.template.attribute.value', string="Apply on Variants", ondelete='restrict',
         domain="[('id', 'in', possible_bom_product_template_attribute_value_ids)]",
@@ -66,12 +76,7 @@ class ProjectBomLineDetails(models.Model):
 
     description = fields.Char(string='Description', related='product_id.display_name', store=True)
 
-    type = fields.Selection([
-        ('bom', 'BOM'),
-        ('lot', 'Lot'),
-        ('kit', 'Kit'),
-    ], string='Type'
-    )
+    type = fields.Selection(selection='_get_type_used_detail', string='Type', default='normal')
     used_in_operation = fields.Char(string='Used In Operation')
 
     # Additional fields for EuroPlacer CAD compatibility
@@ -121,6 +126,16 @@ class ProjectBomLineDetails(models.Model):
             else:
                 record.domain_short_description = []
 
+    @api.depends(
+        'semi_product_tmpl_id.attribute_line_ids.value_ids',
+        'semi_product_tmpl_id.attribute_line_ids.attribute_id.create_variant',
+        'semi_product_tmpl_id.attribute_line_ids.product_template_value_ids.ptav_active',
+    )
+    def _compute_possible_product_template_attribute_value_ids(self):
+        for record in self.filtered(lambda r: r.semi_product_tmpl_id):
+            record.possible_product_template_attribute_value_ids = record.semi_product_tmpl_id.valid_product_template_attribute_line_ids._without_no_variant_attributes().product_template_value_ids._only_active()
+
+
     def sterilise_vals(self, vals, current_project_bom_line_id):
         if not vals:
             return vals
@@ -136,7 +151,7 @@ class ProjectBomLineDetails(models.Model):
             ('product_tmpl_id', '=', project_bom_id.product_tmpl_id.id), "|",
             ('product_id', '=', project_bom_id.product_id.id),
             ('product_id', '=', False)
-        ])
+        ], limit=1)
         if not final_product_bom_id:
             _logger.info(f"# Base (final) product in project bom: {project_bom_id.product_tmpl_id}")
             final_product_bom_id = self.env['mrp.bom'].create({
@@ -160,7 +175,7 @@ class ProjectBomLineDetails(models.Model):
                 ('product_tmpl_id', '=', semi_product_tmpl_id.id), "|",
                 ('product_id', '=', semi_product_id.id),
                 ('product_id', '=', False)
-            ])
+            ], limit=1)
             if semi_product_tmpl_id and not semi_product_bom_id:
                 _logger.info(f"# Semi product: {semi_product_tmpl_id}")
                 semi_product_bom_id = self.env['mrp.bom'].create({
@@ -177,7 +192,7 @@ class ProjectBomLineDetails(models.Model):
             hw_option_bom_id = self.env['mrp.bom'].search([
                 ('product_id', '!=', False),
                 ('product_id', '=', hw_option.id),
-            ])
+            ], limit=1)
             if hw_option and not hw_option_bom_id:
                 _logger.info(f"# Kits: {hw_option}")
                 hw_option_bom_id = self.env['mrp.bom'].create({
@@ -209,7 +224,7 @@ class ProjectBomLineDetails(models.Model):
                 "|",
                 ('project_product_id', '=', vals['product_id']),
                 ('bom_line_id.product_id', '=', vals['product_id'])
-            ])
+            ], limit=1)
             bom_id = hw_option_bom_id
         elif semi_product_bom_id and not hw_option:
             project_bom_line_id = self.env['project.mrp.bom.line'].search([
@@ -221,29 +236,37 @@ class ProjectBomLineDetails(models.Model):
                 "|",
                 ('project_product_id', '=', vals['product_id']),
                 ('bom_line_id.product_id', '=', vals['product_id'])
-            ])
+            ], limit=1)
             bom_id = semi_product_bom_id
         else:
             project_bom_line_id = self.env['project.mrp.bom.line'].search([
                 ('project_bom_id', '=', project_bom_id.id),
                 ('semi_product_tmpl_id', '=', False),
+                ('final_product_tmpl_id', '=', final_product_bom_id.product_tmpl_id.id),
+                "|",
+                ('final_product_id', '=', final_product_bom_id.product_id.id),
+                ('final_product_id', '=', False),
                 "|",
                 ('project_product_id', '=', vals['product_id']),
                 ('bom_line_id.product_id', '=', vals['product_id'])
-            ])
+            ], limit=1)
             bom_id = final_product_bom_id
 
-        if current_project_bom_line_id and current_project_bom_line_id != project_bom_line_id:
-            current_project_bom_line_id.unlink()
-            current_project_bom_line_id = self.env['project.mrp.bom.line']
-
-        if current_project_bom_line_id and project_bom_line_id == current_project_bom_line_id:
-            current_project_bom_line_id.write({
-                'project_product_qty': current_project_bom_line_id.project_product_qty + 1.0,
+        if current_project_bom_line_id and current_project_bom_line_id.project_bom_line_id != project_bom_line_id:
+            current_project_bom_line_id.project_bom_line_id.write({
+                'project_product_qty': current_project_bom_line_id.project_bom_line_id.project_product_qty - 1.0,
+            })
+            if current_project_bom_line_id.project_bom_line_id.project_product_qty == 0.0:
+                current_project_bom_line_id.project_bom_line_id.unlink()
+        if current_project_bom_line_id and project_bom_line_id == current_project_bom_line_id.project_bom_line_id:
+            current_project_bom_line_id.project_bom_line_id.write({
+                'project_product_qty': current_project_bom_line_id.project_bom_line_id.project_product_qty + 1.0,
             })
         elif not project_bom_line_id:
             project_bom_line_id = self.env['project.mrp.bom.line'].create({
                 'project_bom_id': project_bom_id.id,
+                'final_product_tmpl_id': not hw_option and not semi_product_tmpl_id and final_product_bom_id.product_tmpl_id.id or False,
+                'final_product_id': not hw_option and not semi_product_tmpl_id and final_product_bom_id.product_id.id or False,
                 'semi_product_tmpl_id': hw_option and hw_option.product_tmpl_id.id or semi_product_tmpl_id and semi_product_tmpl_id.id or False,
                 'semi_product_id': hw_option and hw_option.id or semi_product_id and semi_product_id.id or False,
                 'project_product_id': vals['product_id'],
@@ -254,6 +277,8 @@ class ProjectBomLineDetails(models.Model):
 
         else:
             project_bom_line_id.write({
+                'semi_product_tmpl_id': hw_option and hw_option.product_tmpl_id.id or semi_product_tmpl_id and semi_product_tmpl_id.id or False,
+                'semi_product_id': hw_option and hw_option.id or semi_product_id and semi_product_id.id or False,
                 'project_product_qty': project_bom_line_id.project_product_qty + 1.0,
                 'product_qty': project_bom_line_id.product_qty + 1.0,
                 'bom_id': bom_id.id,

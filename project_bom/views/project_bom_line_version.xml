@@ -5,7 +5,7 @@
             <field name="model">project.mrp.bom.line.version</field>
             <field name="arch" type="xml">
                 <tree string="Project BOM line version" editable="top">
-                    <fiels name="version"/>
+                    <field name="version"/>
                     <field name="product_id"/>
                     <field name="product_tmpl_id"/>
                     <field name="company_id"/>

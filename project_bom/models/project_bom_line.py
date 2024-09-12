@@ -143,11 +143,24 @@ class ProjectMrpBomLine(models.Model):
                             'product_uom_id': record.project_product_uom_id.id,
                             'product_qty': record.project_product_qty,
                         })
-            elif not record.approve and version:
-                record.bom_line_id.product_id = version.product_id
-                record.bom_line_id.product_uom_id = version.product_uom_id
-                record.bom_line_id.product_qty = version.product_qty
+            # elif not record.approve and version:
+            #     record.bom_line_id.product_id = version.product_id
+            #     record.bom_line_id.product_uom_id = version.product_uom_id
+            #     record.bom_line_id.product_qty = version.product_qty
             # record.project_bom_id
+
+    def action_undo(self):
+        for record in self:
+            if record.version_ids:
+                record.write({
+                    'project_product_id': record.version_ids[-1].product_id,
+                    'project_product_uom_id': record.version_ids[-1].product_uom_id,
+                    'project_product_qty': record.version_ids[-1].product_qty,
+                    'product_id': record.version_ids[-1].product_id.id,
+                    'product_uom_id': record.version_ids[-1].product_uom_id.id,
+                    'product_qty': record.version_ids[-1].product_qty,
+                })
+            record.approve = False
 
     @api.model_create_multi
     def create(self, vals_list):

@@ -11,11 +11,13 @@
             <xpath expr="//notebook/page[@name='general_information']" position="after">
                 <page string="Project BOM data" name="project_bom_data" invisible="product_variant_count &gt; 1">
                     <group>
-                        <group string="CAD data" name="cad">
-                            <field name="x_coordinate"/>
-                            <field name="y_coordinate"/>
+                        <group string="Technical data" name="cad">
+                            <field name="component_package"/>
+                            <field name="component_value"/>
+                            <field name="component_voltage"/>
+                            <field name="component_other"/>
                         </group>
-                        <group string="Technical data">
+                        <group string="Other data">
                             <field name="short_description"/>
                         </group>
                     </group>

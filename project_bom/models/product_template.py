@@ -38,6 +38,11 @@ class ProductTemplate(models.Model):
         compute='_compute_project_bom_count')
     # CAD additional information
     short_description = fields.Char('Technical Description', size=40)
+    component_package = fields.Char('Package')
+    component_value = fields.Float('Value')
+    component_voltage = fields.Float('Voltage')
+    component_other = fields.Char('Temperature/Tolerance')
+
     x_coordinate = fields.Float(string='X Coordinate')
     y_coordinate = fields.Float(string='Y Coordinate')
 

@@ -270,6 +270,11 @@ class ProjectMrpBom(models.Model):
     #         record.action_version_control()
     #         record.bom_id.sequence = 9999
 
+    def unlink(self):
+        for record in self:
+            record.project_bom_line_ids.unlink()
+        return super().unlink()
+
     def action_update_groups(self, product_id):
         for record in self:
             product_tmpl = {}
