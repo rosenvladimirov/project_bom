@@ -1,3 +1,4 @@
+from . import component_definition
 from . import product_template
 from . import project_product_types
 from . import project_mrp_bom

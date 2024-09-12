@@ -1,0 +1,56 @@
+<odoo>
+    <data>
+        <record id="view_component_definition_packages_tree" model="ir.ui.view">
+            <field name="name">component.definition.packages.tree</field>
+            <field name="model">component.definition.packages</field>
+            <field name="arch" type="xml">
+                <tree string="Components Case/Packages" editable="top">
+                    <field name="code"/>
+                    <field name="name"/>
+                    <field name="length"/>
+                    <field name="width"/>
+                    <field name="height"/>
+                </tree>
+            </field>
+        </record>
+        <record id="view_component_definition_packages_form" model="ir.ui.view">
+            <field name="name">component.definition.packages.form</field>
+            <field name="model">component.definition.packages</field>
+            <field name="arch" type="xml">
+                <form string="Components Case/Packages">
+                    <group string="Names">
+                        <field name="code"/>
+                        <field name="name"/>
+                    </group>
+                    <group string="Data">
+                        <field name="width"/>
+                        <field name="length"/>
+                        <field name="height"/>
+                    </group>
+                </form>
+            </field>
+        </record>
+        <record id="view_component_definition_packages_filter" model="ir.ui.view">
+            <field name="name">component.definition.packages.select</field>
+            <field name="model">component.definition.packages</field>
+            <field name="arch" type="xml">
+                <search string="Component packages">
+                    <field name="name" filter_domain="['|',('name','like',self),('code','ilike',self)]"/>
+                    <field name="code" filter_domain="[('code','ilike',self)]"/>
+                </search>
+            </field>
+        </record>
+        <record id="action_component_definition_packages" model="ir.actions.act_window">
+            <field name="name">Components Case/Packages</field>
+            <field name="res_model">component.definition.packages</field>
+            <field name="view_mode">tree,form</field>
+            <field name="search_view_id" ref="project_bom.view_component_definition_packages_filter"/>
+            <field name="view_id" ref="project_bom.view_component_definition_packages_tree"/>
+        </record>
+        <menuitem id="menu_component_definition_packages"
+          name="Components Case/Packages"
+          parent="mrp.menu_mrp_configuration"
+          action="project_bom.action_component_definition_packages"
+          sequence="99"/>
+    </data>
+</odoo>

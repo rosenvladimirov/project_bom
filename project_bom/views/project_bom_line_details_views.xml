@@ -21,7 +21,6 @@
                     <field name="product_qty"/>
                     <field name="product_id" domain="domain_short_description"/>
                     <field name="hw_option" domain="[('is_kits', '=', True)]"/>
-
                     <field name="possible_bom_product_template_attribute_value_ids" column_invisible="1"/>
                     <field name="bom_product_template_attribute_value_ids"
                            widget="many2many_tags"

@@ -11,10 +11,15 @@ class ProductProduct(models.Model):
     short_description = fields.Char('Technical Description',
                                     size=40,
                                     default=lambda self: self.product_tmpl_id.short_description)
-    component_package = fields.Char('Package', related='product_tmpl_id.component_package', store=True)
-    component_value = fields.Float('Value', related='product_tmpl_id.component_value', store=True)
-    component_voltage = fields.Float('Voltage', related='product_tmpl_id.component_voltage', store=True)
-    component_other = fields.Char('Temperature/Tolerance', related='product_tmpl_id.component_other', store=True)
-
-    x_coordinate = fields.Float(string='X Coordinate', default=lambda self: self.product_tmpl_id.x_coordinate)
-    y_coordinate = fields.Float(string='Y Coordinate', default=lambda self: self.product_tmpl_id.y_coordinate)
+    # component_package = fields.Char('Package', related='product_tmpl_id.component_package', store=True)
+    # component_value = fields.Float('Value', related='product_tmpl_id.component_value', store=True)
+    # component_voltage = fields.Float('Voltage', related='product_tmpl_id.component_voltage', store=True)
+    # component_other = fields.Char('Temperature/Tolerance', related='product_tmpl_id.component_other', store=True)
+    #
+    # x_coordinate = fields.Float(string='X Coordinate', default=lambda self: self.product_tmpl_id.x_coordinate)
+    # y_coordinate = fields.Float(string='Y Coordinate', default=lambda self: self.product_tmpl_id.y_coordinate)
+    component_type_id = fields.Many2one('component.definition.properties',
+                                        related='product_tmpl_id.component_type_id',
+                                        store=True)
+    component_properties = fields.Properties('Component technical data',
+                                             definition='component_type_id.component_properties_definition')

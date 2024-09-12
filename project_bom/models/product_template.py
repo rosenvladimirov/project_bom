@@ -36,15 +36,19 @@ class ProductTemplate(models.Model):
     project_bom_count = fields.Integer(
         '# Bill of Material',
         compute='_compute_project_bom_count')
+
     # CAD additional information
     short_description = fields.Char('Technical Description', size=40)
-    component_package = fields.Char('Package')
-    component_value = fields.Float('Value')
-    component_voltage = fields.Float('Voltage')
-    component_other = fields.Char('Temperature/Tolerance')
+    component_type_id = fields.Many2one('component.definition.properties', 'Component Type')
+    component_properties = fields.Properties('Component technical data',
+                                             definition='component_type_id.component_properties_definition')
 
-    x_coordinate = fields.Float(string='X Coordinate')
-    y_coordinate = fields.Float(string='Y Coordinate')
+    # component_package = fields.Char('Package')
+    # component_value = fields.Float('Value')
+    # component_voltage = fields.Float('Voltage')
+    # component_other = fields.Char('Temperature/Tolerance')
+    # x_coordinate = fields.Float(string='X Coordinate')
+    # y_coordinate = fields.Float(string='Y Coordinate')
 
     def _compute_project_bom_count(self):
         read_group_res = self.env['project.mrp.bom'].read_group([('product_tmpl_id', 'in', self.ids)],

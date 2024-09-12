@@ -42,8 +42,9 @@ class ProjectBomLineDetails(models.Model):
                                        string='Final Product',
                                        related='project_bom_id.product_id',
                                        )
-    possible_product_template_attribute_value_ids = fields.Many2many(
+    possible_bom_product_template_attribute_value_ids = fields.Many2many(
         'product.template.attribute.value',
+        relation="bom_product_attribute_project_line_details_rel",
         compute='_compute_possible_product_template_attribute_value_ids')
     bom_product_template_attribute_value_ids = fields.Many2many(
         'product.template.attribute.value', string="Apply on Variants", ondelete='restrict',
@@ -80,8 +81,8 @@ class ProjectBomLineDetails(models.Model):
     used_in_operation = fields.Char(string='Used In Operation')
 
     # Additional fields for EuroPlacer CAD compatibility
-    x_coordinate = fields.Float(string='X Coordinate', related='product_id.x_coordinate', store=True)
-    y_coordinate = fields.Float(string='Y Coordinate', related='product_id.y_coordinate', store=True)
+    x_coordinate = fields.Float(string='X Coordinate')
+    y_coordinate = fields.Float(string='Y Coordinate')
     theta = fields.Float(string='Theta')
     pattern_reference = fields.Char(string='Pattern Reference')
     pattern_call = fields.Char(string='Pattern Call')

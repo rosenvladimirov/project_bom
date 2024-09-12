@@ -2,6 +2,7 @@
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 import base64
 import logging
+from xml.etree import ElementTree as ET
 
 from odoo import models, fields, _, Command
 from odoo.exceptions import UserError
@@ -59,6 +60,134 @@ class ProjectBomLineImportWizard(models.TransientModel):
             self._validate_data()
         return {}
 
+    def _base_internal_import(self, mimetype):
+        import_wizard = self.env['base_import.import'].create({
+            'res_model': 'project.bom.line.details.import.data',
+            'file': base64.b64decode(self.data_file),
+            'file_type': mimetype
+        })
+
+        opts = {
+            'date_format': '',
+            'datetime_format': '',
+            'quoting': '"',
+            'separator': ',',
+            'float_decimal_separator': '.',
+            'float_thousand_separator': ',',
+            'has_headers': True
+        }
+
+        result_parse = import_wizard.parse_preview({**opts})
+
+        if result_parse.get('error'):
+            raise UserError(result_parse['error'])
+
+        opts = result_parse['options']
+        import_header = []
+        for header in result_parse['headers']:
+            _logger.info("Header: %s", header)
+            import_header.append(HEADER_FIELDS.get(header, False))
+        # ['qty', 'default_code', 'short_description', 'description', False, False,
+        #  'short_description_option', False, False, 'designator', False, False, False, False]
+        _logger.info("Import Header: %s", import_header)
+        if not import_header:
+            raise UserError('No header fields found. Please make sure the header '
+                            'row is not hidden and all columns are populated.')
+        results = import_wizard.execute_import(import_header, [], {**opts})
+
+        if results.get('messages'):
+            message = ''
+            for msg in results['messages']:
+                message += msg['message'] + '\n'
+            raise UserError(message)
+
+        new_import_data = self.env['project.bom.line.details.import.data']
+        import_data = self.env['project.bom.line.details.import.data'].browse(results['ids'])
+        # Check for designators and add import_id
+        for import_line in import_data:
+            designator_import_lines = import_line.designator and import_line.designator.split(',') or []
+            for designator in designator_import_lines:
+                new_import_data.create({
+                    'qty': import_line.qty / len(designator_import_lines),
+                    'default_code': import_line.default_code,
+                    'short_description': import_line.short_description,
+                    'description': import_line.description,
+                    'short_description_option': import_line.short_description_option,
+                    'designator': designator,
+                    'import_id': self.id
+                })
+            if not designator_import_lines:
+                new_import_data.create({
+                    'qty': import_line.qty,
+                    'default_code': import_line.default_code,
+                    'short_description': import_line.short_description,
+                    'description': import_line.description,
+                    'short_description_option': import_line.short_description_option,
+                    'import_id': self.id
+                })
+        import_data.unlink()
+
+    def _brd_import(self):
+        new_import_data = self.env['project.bom.line.details.import.data']
+        brdxml = ET.parse(base64.b64decode(self.data_file))
+        root = brdxml.getroot()
+        board = root.find('drawing').find('board')
+        plain = board.find('plain')
+        elements = board.find('elements')
+        signals = board.find('signals')
+
+        for el in elements.iter('element'):
+            populate = el.get('populate') != 'no'
+            for a in el.iter('attribute'):
+                if 'value' in a.attrib and a.attrib['value'].upper() != 'DNP':
+                    part_attrib = a.attrib
+                    # extra_fields[a.attrib['name']] = a.attrib['value']
+                    short_description = f"{part_attrib.get('package')}_{part_attrib.get('value')}"
+                    product_id = self.env['product.product'].search([
+                        ('short_description', 'ilike', short_description)
+                    ], limit=1)
+                    new_import_data.create({
+                        'qty': 1.0,
+                        'designator': part_attrib.get('name'),
+                        'default_code': product_id and product_id.default_code or '',
+                        'description': f"library: {part_attrib.get('library')} device set:{part_attrib.get('deviceset')}",
+                        'product_id': product_id and product_id.id or False,
+                        'short_description': short_description,
+                        'import_id': self.id
+                    })
+
+    def _sch_import(self):
+        new_import_data = self.env['project.bom.line.details.import.data']
+        sch_tree = ET.parse(base64.b64decode(self.data_file))
+        sch_root = sch_tree.getroot()
+        drawing = sch_root.find("drawing")
+        # settings = drawing.find("settings").findall("setting")
+        # grid = drawing.find("grid")
+        # layers = drawing.find("layers").findall("layer")
+        schematic = drawing.find("schematic")
+        # libraries = schematic.find("libraries").findall("library")
+        parts = schematic.find("parts").findall("part")
+        # sheets = schematic.find("sheets").findall("sheet")
+
+        for part in parts:
+            _logger.info(f"{part.attrib}")
+            part_attrib = part.attrib
+            if not part_attrib.get('device'):
+                continue
+            short_description = f"{part_attrib.get('device')}_{part_attrib.get('value')}"
+            product_id = self.env['product.product'].search([
+                ('short_description', 'ilike', short_description)
+            ], limit=1)
+            new_import_data.create({
+                'qty': 1.0,
+                'designator': part_attrib.get('name'),
+                'default_code': product_id and product_id.default_code or '',
+                'description': f"library: {part_attrib.get('library')} device set:{part_attrib.get('deviceset')}",
+                'product_id': product_id and product_id.id or False,
+                'short_description': short_description,
+                'import_id': self.id
+            })
+
     def action_upload(self):
         self.ensure_one()
 
@@ -72,77 +201,28 @@ class ProjectBomLineImportWizard(models.TransientModel):
                 mimetype = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             elif file_extension == 'ods':
                 mimetype = 'application/vnd.oasis.opendocument.spreadsheet'
+            elif file_extension == 'sch':
+                mimetype = 'application/x-schematics'
+            elif file_extension == 'brd':
+                mimetype = 'application/eagle+xml'
             else:
                 raise UserError('Unsupported file format. Please upload a CSV, XLS, or XLSX file.')
 
             if self.line_details:
                 self.line_details.unlink()
 
-            import_wizard = self.env['base_import.import'].create({
-                'res_model': 'project.bom.line.details.import.data',
-                'file': base64.b64decode(self.data_file),
-                'file_type': mimetype
-            })
+            if mimetype in ['text/csv',
+                            'application/vnd.ms-excel',
+                            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                            'application/vnd.oasis.opendocument.spreadsheet'
+                            ]:
+                self._base_internal_import(mimetype)
 
-            opts = {
-                'date_format': '',
-                'datetime_format': '',
-                'quoting': '"',
-                'separator': ',',
-                'float_decimal_separator': '.',
-                'float_thousand_separator': ',',
-                'has_headers': True
-            }
+            elif mimetype == 'application/x-schematics':
+                self._sch_import()
+            elif mimetype == 'application/eagle+xml':
+                self._brd_import()
 
-            result_parse = import_wizard.parse_preview({**opts})
-
-            if result_parse.get('error'):
-                raise UserError(result_parse['error'])
-
-            opts = result_parse['options']
-            import_header = []
-            for header in result_parse['headers']:
-                _logger.info("Header: %s", header)
-                import_header.append(HEADER_FIELDS.get(header, False))
-            # ['qty', 'default_code', 'short_description', 'description', False, False,
-            #  'short_description_option', False, False, 'designator', False, False, False, False]
-            _logger.info("Import Header: %s", import_header)
-            if not import_header:
-                raise UserError('No header fields found. Please make sure the header '
-                                'row is not hidden and all columns are populated.')
-            results = import_wizard.execute_import(import_header,[],{**opts})
-
-            if results.get('messages'):
-                message = ''
-                for msg in results['messages']:
-                    message += msg['message'] + '\n'
-                raise UserError(message)
-
-            new_import_data = self.env['project.bom.line.details.import.data']
-            import_data = self.env['project.bom.line.details.import.data'].browse(results['ids'])
-            # Check for designators and add import_id
-            for import_line in import_data:
-                designator_import_lines = import_line.designator and import_line.designator.split(',') or []
-                for designator in designator_import_lines:
-                    new_import_data.create({
-                        'qty': import_line.qty / len(designator_import_lines),
-                        'default_code': import_line.default_code,
-                        'short_description': import_line.short_description,
-                        'description': import_line.description,
-                        'short_description_option': import_line.short_description_option,
-                        'designator': designator,
-                        'import_id': self.id
-                    })
-                if not designator_import_lines:
-                    new_import_data.create({
-                        'qty': import_line.qty,
-                        'default_code': import_line.default_code,
-                        'short_description': import_line.short_description,
-                        'description': import_line.description,
-                        'short_description_option': import_line.short_description_option,
-                        'import_id': self.id
-                    })
-            import_data.unlink()
         self._validate_data()
         action = self.env.ref('project_bom.action_custom_import_wizard', raise_if_not_found=False)
 

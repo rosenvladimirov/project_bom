@@ -1,0 +1,50 @@
+<odoo>
+    <data>
+        <record id="view_component_definition_properties_tree" model="ir.ui.view">
+            <field name="name">component.definition.properties.tree</field>
+            <field name="model">component.definition.properties</field>
+            <field name="arch" type="xml">
+                <tree string="Components properties">
+                    <field name="sequence" widget="handle"/>
+                    <field name="code"/>
+                    <field name="name"/>
+                </tree>
+            </field>
+        </record>
+        <record id="view_component_definition_properties_form" model="ir.ui.view">
+            <field name="name">component.definition.properties.form</field>
+            <field name="model">component.definition.properties</field>
+            <field name="arch" type="xml">
+                <form string="Components properties">
+                    <group>
+                        <field name="code"/>
+                        <field name="name"/>
+                        <field name="component_properties_definition"/>
+                    </group>
+                </form>
+            </field>
+        </record>
+        <record id="view_component_definition_properties_filter" model="ir.ui.view">
+            <field name="name">component.definition.properties.select</field>
+            <field name="model">component.definition.properties</field>
+            <field name="arch" type="xml">
+                <search string="Component properties">
+                    <field name="name" filter_domain="['|',('name','like',self),('code','ilike',self)]"/>
+                    <field name="code" filter_domain="[('code','ilike',self)]"/>
+                </search>
+            </field>
+        </record>
+        <record id="action_component_definition_properties" model="ir.actions.act_window">
+            <field name="name">Components properties</field>
+            <field name="res_model">component.definition.properties</field>
+            <field name="view_mode">tree,form</field>
+            <field name="search_view_id" ref="project_bom.view_component_definition_properties_filter"/>
+            <field name="view_id" ref="project_bom.view_component_definition_properties_tree"/>
+        </record>
+        <menuitem id="menu_component_definition_properties"
+          name="Components properties"
+          parent="mrp.menu_mrp_configuration"
+          action="project_bom.action_component_definition_properties"
+          sequence="99"/>
+    </data>
+</odoo>

@@ -25,11 +25,16 @@ class ProjectBomLineDetailsImportData(models.TransientModel):
                                 help='Used kit for Project BOM, replacement of component.')
     type = fields.Selection(selection='_get_type_used_detail', string='Type', default='normal')
     semi_product_tmpl_id = fields.Many2one('product.template', related='import_id.product_tmpl_id')
-    possible_product_template_attribute_value_ids = fields.Many2many(
+    possible_bom_product_template_attribute_value_ids = fields.Many2many(
         'product.template.attribute.value',
-        compute='_compute_possible_product_template_attribute_value_ids')
+        string="Possible Variants",
+        relation='attribute_value_import_wizard_rel',
+        compute='_compute_possible_bom_product_template_attribute_value_ids')
     bom_product_template_attribute_value_ids = fields.Many2many(
-        'product.template.attribute.value', string="Apply on Variants", ondelete='restrict',
+        'product.template.attribute.value',
+        relation='bom_attribute_value_import_wizard_rel',
+        string="Apply on Variants",
+        ondelete='restrict',
         domain="[('id', 'in', possible_bom_product_template_attribute_value_ids)]",
         help="BOM Product Variants needed to apply this line.")
 
@@ -38,7 +43,7 @@ class ProjectBomLineDetailsImportData(models.TransientModel):
         'semi_product_tmpl_id.attribute_line_ids.attribute_id.create_variant',
         'semi_product_tmpl_id.attribute_line_ids.product_template_value_ids.ptav_active',
     )
-    def _compute_possible_product_template_attribute_value_ids(self):
+    def _compute_possible_bom_product_template_attribute_value_ids(self):
         for record in self.filtered(lambda r: r.semi_product_tmpl_id):
             record.possible_product_template_attribute_value_ids = record.semi_product_tmpl_id.valid_product_template_attribute_line_ids._without_no_variant_attributes().product_template_value_ids._only_active()
 
