@@ -129,8 +129,7 @@ class ProjectBomLineImportWizard(models.TransientModel):
 
     def _brd_import(self):
         new_import_data = self.env['project.bom.line.details.import.data']
-        brdxml = ET.parse(base64.b64decode(self.data_file))
-        root = brdxml.getroot()
+        root = ET.fromstring(base64.b64decode(self.data_file))
         board = root.find('drawing').find('board')
         plain = board.find('plain')
         elements = board.find('elements')
@@ -158,8 +157,7 @@ class ProjectBomLineImportWizard(models.TransientModel):
 
     def _sch_import(self):
         new_import_data = self.env['project.bom.line.details.import.data']
-        sch_tree = ET.parse(base64.b64decode(self.data_file))
-        sch_root = sch_tree.getroot()
+        sch_root = ET.fromstring(base64.b64decode(self.data_file))
         drawing = sch_root.find("drawing")
         # settings = drawing.find("settings").findall("setting")
         # grid = drawing.find("grid")

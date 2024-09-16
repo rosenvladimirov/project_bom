@@ -45,7 +45,7 @@ class ProjectBomLineDetails(models.Model):
     possible_bom_product_template_attribute_value_ids = fields.Many2many(
         'product.template.attribute.value',
         relation="bom_product_attribute_project_line_details_rel",
-        compute='_compute_possible_product_template_attribute_value_ids')
+        compute='_compute_possible_bom_product_template_attribute_value_ids')
     bom_product_template_attribute_value_ids = fields.Many2many(
         'product.template.attribute.value', string="Apply on Variants", ondelete='restrict',
         domain="[('id', 'in', possible_bom_product_template_attribute_value_ids)]",
@@ -132,9 +132,9 @@ class ProjectBomLineDetails(models.Model):
         'semi_product_tmpl_id.attribute_line_ids.attribute_id.create_variant',
         'semi_product_tmpl_id.attribute_line_ids.product_template_value_ids.ptav_active',
     )
-    def _compute_possible_product_template_attribute_value_ids(self):
+    def _compute_possible_bom_product_template_attribute_value_ids(self):
         for record in self.filtered(lambda r: r.semi_product_tmpl_id):
-            record.possible_product_template_attribute_value_ids = record.semi_product_tmpl_id.valid_product_template_attribute_line_ids._without_no_variant_attributes().product_template_value_ids._only_active()
+            record.possible_bom_product_template_attribute_value_ids = record.semi_product_tmpl_id.valid_product_template_attribute_line_ids._without_no_variant_attributes().product_template_value_ids._only_active()
 
 
     def sterilise_vals(self, vals, current_project_bom_line_id):
