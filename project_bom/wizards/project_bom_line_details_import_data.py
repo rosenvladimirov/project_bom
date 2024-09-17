@@ -17,6 +17,7 @@ class ProjectBomLineDetailsImportData(models.TransientModel):
     default_code = fields.Char(string='Internal reference')
     short_description = fields.Char(string='Technical Description')
     short_description_option = fields.Char(string='Option Description')
+    manufacturer_part = fields.Char(string='Manufacturer Part Number')
     product_id = fields.Many2one('product.product', string='Product')
     description = fields.Char(string='Description')
     error_message = fields.Text(string='Error Message', readonly=True)
@@ -37,6 +38,9 @@ class ProjectBomLineDetailsImportData(models.TransientModel):
         ondelete='restrict',
         domain="[('id', 'in', possible_bom_product_template_attribute_value_ids)]",
         help="BOM Product Variants needed to apply this line.")
+    x_coordinate = fields.Float(string='X Coordinate')
+    y_coordinate = fields.Float(string='Y Coordinate')
+    theta = fields.Float(string='Theta')
 
     @api.depends(
         'semi_product_tmpl_id.attribute_line_ids.value_ids',

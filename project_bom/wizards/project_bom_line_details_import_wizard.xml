@@ -35,6 +35,10 @@
                             <field name="bom_product_template_attribute_value_ids"/>
                             <field name="hw_option" can_create="0" can_write="0" domain="[('is_kits', '=', True)]"/>
                             <field name="error_message" readonly="1" force_save="1"/>
+                            <field name="manufacturer_part" optional="hide"/>
+                            <field name="x_coordinate" optional="hide"/>
+                            <field name="y_coordinate" optional="hide"/>
+                            <field name="theta" optional="hide"/>
                         </tree>
                     </field>
                     <footer>

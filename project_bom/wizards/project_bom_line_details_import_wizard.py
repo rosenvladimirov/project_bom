@@ -141,31 +141,65 @@ class ProjectBomLineImportWizard(models.TransientModel):
         elements = board.find('elements')
         signals = board.find('signals')
 
+        data = {}
         for el in elements.iter('element'):
-            populate = el.get('populate') != 'no'
+            populate = el.get('populate', '') != 'no'
+            if not populate:
+                continue
             libs = [lib for lib in board.find('libraries').findall('library')
                     if lib.attrib['name'] == el.attrib['library']]
             elr = rot(el.get('rot'))
             layer = 'B' if elr[0] else 'F'
+            designator = el.get('name')
+            package = el.get('package', '').split('_')[0]
+
+            elx = float(el.attrib['x'])
+            ely = float(el.attrib['y'])
+
+            if designator.startswith("R"):
+                package = "RC" + package[1:]
+            elif designator.startswith("C"):
+                package = "CC" + package[1:]
+
+            value = el.get('value')
+            if package.startswith('TESTPAD') or package.upper() == 'DNP':
+                continue
+            if not data.get(designator):
+                data[designator] = {
+                    "package": package,
+                    "value": value,
+                    "rot": elr,
+                    "layer": layer,
+                    "libs": libs,
+                    "x": elx,
+                    "y": ely,
+                }
 
             for a in el.iter('attribute'):
-                if 'value' in a.attrib and a.attrib['value'].upper() != 'DNP':
-                    part_attrib = a.attrib
-                    _logger.info(f"COMPONENT {part_attrib}")
+                if 'name' in a.attrib:
+                    attribute = a.attrib
+                    # _logger.info(f"COMPONENT {attribute}")
+                    if not data[designator].get("options"):
+                        data[designator]['options'] = {}
+                    for k, v in attribute.items():
+                        data[designator]['options'].update({k.lower(): v})
                     # extra_fields[a.attrib['name']] = a.attrib['value']
-                    short_description = f"{part_attrib.get('package')}_{part_attrib.get('value')}"
-                    product_id = self.env['product.product'].search([
-                        ('short_description', 'ilike', short_description)
-                    ], limit=1)
-                    new_import_data.create({
-                        'qty': 1.0,
-                        'designator': part_attrib.get('name'),
-                        'default_code': product_id and product_id.default_code or '',
-                        'description': f"library: {part_attrib.get('library')} device set:{part_attrib.get('deviceset')}",
-                        'product_id': product_id and product_id.id or False,
-                        'short_description': short_description,
-                        'import_id': self.id
-                    })
+        for designator, attribute in data.items():
+            _logger.info(f"{designator}: {attribute}")
+            short_description = f"{attribute.get('package')}_{attribute.get('value')}"
+            new_import_data.create({
+                'qty': 1.0,
+                'designator': designator,
+                'default_code': attribute.get('options') and attribute['options'].get('MecID', '') or '',
+                'description': f"library: {attribute.get('library')} package:{attribute.get('package')} value: {attribute.get('value')}",
+                'short_description': short_description,
+                'short_description_option': attribute.get('options') and attribute['options'].get('opt', '') or '',
+                'manufacturer_part': attribute.get('options') and attribute['options'].get('manufacturer_part_number', '') or '',
+                'x_coordinate': attribute.get('x', 0.0),
+                'y_coordinate': attribute.get('y', 0.0),
+                'theta': attribute.get('rot') and attribute['rot'][3] or 0.0,
+                'import_id': self.id,
+            })
 
     def _sch_import(self):
         new_import_data = self.env['project.bom.line.details.import.data']
@@ -258,7 +292,7 @@ class ProjectBomLineImportWizard(models.TransientModel):
                 'product_qty': line.qty,
                 'designator': line.designator,
                 'hw_option': line.hw_option.id,
-                'bom_product_template_attribute_value_ids': [Command.set(line.possible_product_template_attribute_value_ids.ids)],
+                'bom_product_template_attribute_value_ids': [Command.set(line.possible_bom_product_template_attribute_value_ids.ids)],
                 'semi_product_tmpl_id': self.semi_product_tmpl_id.id,
                 'semi_product_id': self.semi_product_id.id,
             })
