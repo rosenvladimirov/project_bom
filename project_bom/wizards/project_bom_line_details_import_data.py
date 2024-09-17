@@ -45,5 +45,5 @@ class ProjectBomLineDetailsImportData(models.TransientModel):
     )
     def _compute_possible_bom_product_template_attribute_value_ids(self):
         for record in self.filtered(lambda r: r.semi_product_tmpl_id):
-            record.possible_product_template_attribute_value_ids = record.semi_product_tmpl_id.valid_product_template_attribute_line_ids._without_no_variant_attributes().product_template_value_ids._only_active()
+            record.possible_bom_product_template_attribute_value_ids = record.semi_product_tmpl_id.valid_product_template_attribute_line_ids._without_no_variant_attributes().product_template_value_ids._only_active()
 

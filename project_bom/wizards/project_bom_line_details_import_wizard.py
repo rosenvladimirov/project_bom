@@ -2,6 +2,7 @@
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 import base64
 import logging
+import string
 from xml.etree import ElementTree as ET
 
 from odoo import models, fields, _, Command
@@ -128,6 +129,11 @@ class ProjectBomLineImportWizard(models.TransientModel):
         import_data.unlink()
 
     def _brd_import(self):
+        def rot(rot_string):
+            if not rot_string:
+                return
+            return 'M' in rot_string, 'S' in rot_string, float(''.join(d for d in rot_string if d in string.digits + '.'))
+
         new_import_data = self.env['project.bom.line.details.import.data']
         root = ET.fromstring(base64.b64decode(self.data_file))
         board = root.find('drawing').find('board')
@@ -137,9 +143,15 @@ class ProjectBomLineImportWizard(models.TransientModel):
 
         for el in elements.iter('element'):
             populate = el.get('populate') != 'no'
+            libs = [lib for lib in board.find('libraries').findall('library')
+                    if lib.attrib['name'] == el.attrib['library']]
+            elr = rot(el.get('rot'))
+            layer = 'B' if elr[0] else 'F'
+
             for a in el.iter('attribute'):
                 if 'value' in a.attrib and a.attrib['value'].upper() != 'DNP':
                     part_attrib = a.attrib
+                    _logger.info(f"COMPONENT {part_attrib}")
                     # extra_fields[a.attrib['name']] = a.attrib['value']
                     short_description = f"{part_attrib.get('package')}_{part_attrib.get('value')}"
                     product_id = self.env['product.product'].search([
