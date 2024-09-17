@@ -186,11 +186,20 @@ class ProjectBomLineImportWizard(models.TransientModel):
                     # extra_fields[a.attrib['name']] = a.attrib['value']
         for designator, attribute in data.items():
             _logger.info(f"{designator}: {attribute}")
-            short_description = f"{attribute.get('package')}_{attribute.get('value')}"
+            if attribute.get('options') and attribute['options'].get('mecid', False):
+                short_description = attribute['options']['MecID']
+            else:
+                short_description = f"{attribute.get('package')}_{attribute.get('value')}"
+
+            if attribute.get('options') and attribute['options'].get('artid', False):
+                default_code = attribute['options']['artid']
+            else:
+                default_code = ""
+
             new_import_data.create({
                 'qty': 1.0,
                 'designator': designator,
-                'default_code': attribute.get('options') and attribute['options'].get('MecID', '') or '',
+                'default_code': default_code,
                 'description': f"library: {attribute.get('library')} package:{attribute.get('package')} value: {attribute.get('value')}",
                 'short_description': short_description,
                 'short_description_option': attribute.get('options') and attribute['options'].get('opt', '') or '',
