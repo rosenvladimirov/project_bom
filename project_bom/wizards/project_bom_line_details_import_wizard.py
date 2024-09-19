@@ -262,6 +262,7 @@ class ProjectBomLineImportWizard(models.TransientModel):
             layers = root.find('drawing').find('layers')
             text_layer = ET.Element('layer', {'number': '1'})
             for layer in layers.iter():
+
                 if layer.find('name').text == 'tValues':
                     text_layer = layer
                     break
