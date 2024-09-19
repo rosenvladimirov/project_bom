@@ -23,3 +23,17 @@ class ProductProduct(models.Model):
                                         store=True)
     component_properties = fields.Properties('Component technical data',
                                              definition='component_type_id.component_properties_definition')
+
+    @api.model
+    def _name_search(self, name, domain=None, operator='ilike', limit=None, order=None):
+        short_description = False
+        positive_operators = ['=', 'ilike', '=ilike', 'like', '=like']
+        if name and domain is not None:
+            for arg in domain:
+                if isinstance(arg, (list, tuple)) and arg[0] == 'short_description':
+                    short_description = True
+                    break
+        if name and operator in positive_operators and not short_description:
+            domain += ['|', ('short_description', operator, name),
+                       ('product_tmpl_id.short_description', operator, name)]
+        return super()._name_search(name, domain=domain, operator=operator, limit=limit, order=order)

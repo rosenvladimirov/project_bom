@@ -51,3 +51,13 @@ class ProjectBomLineDetailsImportData(models.TransientModel):
         for record in self.filtered(lambda r: r.semi_product_tmpl_id):
             record.possible_bom_product_template_attribute_value_ids = record.semi_product_tmpl_id.valid_product_template_attribute_line_ids._without_no_variant_attributes().product_template_value_ids._only_active()
 
+
+    @api.onchange('is_valid')
+    def onchange_is_valid(self):
+        for record in self.filtered(lambda r: r.is_valid):
+            import_id = record.import_id
+            import_id.validated = True
+            for line in import_id.line_details:
+                if not line.is_valid:
+                    import_id.validated = False
+                    break
