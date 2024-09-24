@@ -261,35 +261,52 @@ class ProjectBomLineImportWizard(models.TransientModel):
             signals = board.find('signals')
             layers = root.find('drawing').find('layers')
             text_layer = ET.Element('layer', {'number': '1'})
-            for layer in layers.iter():
-
-                if layer.find('name').text == 'tValues':
+            for layer in layers.iter('layer'):
+                _logger.info(f"layer: {layer.attrib}")
+                if layer.attrib.get('name') == 'tValues':
                     text_layer = layer
                     break
 
-            for line in self.line_details:
-                if line.product_id:
-                    element = elements.find('.//element[@value]')
-                    if element[0].text == line.designator:
-                        element.append(ET.Element('attribute', {
+            for line in self.line_details.filtered(lambda r: r.product_id).sorted(lambda r: r.designator):
+                _logger.info(f"LINE {line} - {line.designator} - {line.product_id and line.product_id.name}")
+                for el in elements.iter('element'):
+                    element_attrib = el.attrib
+                    _logger.info(f"element: {element_attrib}")
+                    if element_attrib['name'] == line.designator:
+                        el.append(ET.Element('attribute', {
                             'name': 'ArtID',
                             'value': line.product_id.default_code,
-                            'y': element.get('y'),
-                            'x': element.get('x'),
+                            'y': element_attrib.get('y'),
+                            'x': element_attrib.get('x'),
                             'size': '1.778',
                             'layer': text_layer.get('number'),
                             'display': 'off'
                         }))
                         if line.product_id.short_description or line.product_id.product_tmpl_id.short_description:
-                            element.append(ET.Element('attribute', {
+                            el.append(ET.Element('attribute', {
                                 'name': 'MecID',
                                 'value': line.product_id.short_description or line.product_id.product_tmpl_id.short_description,
-                                'y': element.get('y'),
-                                'x': element.get('x'),
+                                'y': element_attrib.get('y'),
+                                'x': element_attrib.get('x'),
                                 'size': '1.778',
                                 'layer': text_layer.get('number'),
                                 'display': 'off'
                             }))
+                        if line.product_id.component_properties or line.product_id.product_tmpl_id.product_properties:
+                            component_properties = line.product_id.component_properties
+                            component_properties |= line.product_id.product_tmpl_id.product_properties
+                            for key, properties in component_properties.items():
+                                el.append(ET.Element('attribute', {
+                                    'name': key,
+                                    'value': properties,
+                                    'y': element_attrib.get('y'),
+                                    'x': element_attrib.get('x'),
+                                    'size': '1.778',
+                                    'layer': text_layer.get('number'),
+                                    'display': 'off'
+                                }))
+                        break
+
             self.data_file = base64.b64encode(ET.tostring(root, encoding='utf-8', xml_declaration=True))
 
     def _sch_import(self):
@@ -392,7 +409,7 @@ class ProjectBomLineImportWizard(models.TransientModel):
         self.ensure_one()
 
         config_ibom = Config(version, config.rcfile)
-        config_ibom.show_fields = ['MANUFACTURER_PART_NUMBER', 'OPT', 'MecID', 'ArtID']
+        config_ibom.show_fields = ['Value', 'Footprint', 'MANUFACTURER_PART_NUMBER', 'OPT', 'MecID', 'ArtID']
         self._brd_update()
 
         parser = FusionEagleParser(
