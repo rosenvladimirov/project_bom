@@ -2,10 +2,9 @@
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 import base64
 import logging
-import os
 import string
+from fileinput import filename
 from xml.etree import ElementTree as ET
-from xxsubtype import bench
 
 from odoo.tools import config
 from ..libs.InteractiveHtmlBom.core.ibom import generate_bom, generate_file
@@ -13,7 +12,7 @@ from ..libs.InteractiveHtmlBom.ecad.fusion_eagle import FusionEagleParser
 from ..libs.InteractiveHtmlBom.core.config import Config
 from ..libs.InteractiveHtmlBom.version import version
 
-from odoo import models, fields, _, Command
+from odoo import models, fields, _, Command, api
 from odoo.exceptions import UserError
 _logger = logging.getLogger(__name__)
 
@@ -35,6 +34,16 @@ HEADER_FIELDS = {
     'type': 'type',
 }
 
+MIMETYPES = {
+    'csv': 'text/csv',
+    'txt': 'text/plain',
+    'xls': 'application/vnd.ms-excel',
+    'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'ods': 'application/vnd.oasis.opendocument.spreadsheet',
+    'sch': 'application/x-schematics',
+    'brd': 'application/eagle+xml',
+}
+
 
 class ProjectBomLineImportWizard(models.TransientModel):
     _name = 'project.bom.line.details.import.wizard'
@@ -42,10 +51,26 @@ class ProjectBomLineImportWizard(models.TransientModel):
 
     data_file = fields.Binary(string='File')
     filename = fields.Char(string='Filename')
+    filename_mimetype = fields.Char(string='Filename Ext')
+
     data_file_sch = fields.Binary(string='File sch')
     filename_sch = fields.Char(string='Filename sch')
+
     data_file_html = fields.Binary(string='File html')
     filename_html = fields.Char(string='Filename html')
+
+    # data_file_txt = fields.Binary(string='File txt')
+    # filename_txt = fields.Char(string='Filename txt')
+
+    data_file_external = fields.Many2many('project.bom.line.details.import.data.files',
+                                          relation='data_files_import_wizard_rel',
+                                          string='PnP Files')
+    panel_rotation = fields.Selection([
+        ('0', _('0 degrees')),
+        ('90', _('90 degrees')),
+        ('180', _('180 degrees')),
+        ('270', _('270 degrees')),
+    ], string='Panel Rotation', default='0')
 
     validated = fields.Boolean(string='Validated', default=False)
     line_details = fields.One2many('project.bom.line.details.import.data',
@@ -58,6 +83,7 @@ class ProjectBomLineImportWizard(models.TransientModel):
                                            string='Semi Product Template')
     semi_product_id = fields.Many2one('product.product',
                                       string='Semi Product')
+    comments = fields.Char('Description')
 
     def default_get(self, fields_list):
         res = super().default_get(fields_list)
@@ -70,7 +96,7 @@ class ProjectBomLineImportWizard(models.TransientModel):
         return res
 
     def onchange_semi_product_tmpl_id(self):
-        if self.semi_product_tmpl_id:
+        if self.semi_product_tmpl_id or self.semi_product_id:
             self._validate_data()
         return {}
 
@@ -154,6 +180,26 @@ class ProjectBomLineImportWizard(models.TransientModel):
         elements = board.find('elements')
         signals = board.find('signals')
 
+        fiducial = {}
+        x_coordinate_fiducial_1 = y_coordinate_fiducial_1 = 0.0
+        for el in elements.iter('element'):
+            if el.get('name').startswith('FID'):
+                designator = el.get('name')
+                elr = rot(el.get('rot'))
+                layer = 'B' if elr[0] else 'F'
+                if not fiducial.get(designator):
+                    fiducial[designator] = {}
+                fiducial[designator].update({
+                    'x_coordinate_fiducial': float(el.get('x')),
+                    'y_coordinate_fiducial': float(el.get('y')),
+                    'rot': elr[2],
+                    'layer': layer,
+                })
+
+        if fiducial.get('FID1'):
+            x_coordinate_fiducial_1 = fiducial['FID1']['x_coordinate_fiducial']
+            y_coordinate_fiducial_1 = fiducial['FID1']['y_coordinate_fiducial']
+
         data = {}
         for el in elements.iter('element'):
             populate = el.get('populate', '') != 'no'
@@ -167,31 +213,45 @@ class ProjectBomLineImportWizard(models.TransientModel):
 
             elx = float(el.attrib['x'])
             ely = float(el.attrib['y'])
+            value = el.get('value')
+            merge = True
 
             if designator.startswith("R"):
                 package = el.get('package', '').split('_')[0]
+                if package:
+                    package = "R" + "".join(filter(str.isdigit, package))
                 package = "RC" + package[1:]
-                value = el.get('value')
                 if value.split('/')[0] == 'NC':
                     value = "_".join(value.split('/')[:-1]+['NC'])
-                value = value.replace("/", "_").replace("-", "_")
-                if value.upper() == "0R":
-                    value = "0"
-            elif designator.startswith("C"):
+                value = value.replace("/", "_").replace("-", "_").replace('R', '').replace('r', '')
+                if value.find('.') != -1:
+                    value = "_".join(map(lambda s: s.replace('.', s[-1])[:-1], value.split('_')))
+            elif designator.startswith("C") or designator.startswith("E_C"):
                 package = el.get('package', '').split('_')[0]
+                if package:
+                    package = "C" + "".join(filter(str.isdigit, package))
                 package = "CC" + package[1:]
-                value = el.get('value', '').replace("/", "_").replace("-", "_").replace("F", "").replace('f', '')
+                value = value.replace("/", "_").replace("-", "_").replace("F", "").replace('f', '')
+                if value.find('.') != -1:
+                    value = "_".join(map(lambda s: s.replace('.', s[-1])[:-1], value.split('_')))
+            elif designator.startswith("L"):
+                package = el.get('package', '').split('_')[0]
+                if package:
+                    package = "L" + "".join(filter(str.isdigit, package))
+                package = "FC" + package[1:]
+                value = value.replace("/", "_").replace("-", "_").replace("H", "").replace('h', '')
                 if value.find('.') != -1:
                     value = "_".join(map(lambda s: s.replace('.', s[-1])[:-1], value.split('_')))
             else:
                 package = el.get('package', '')
                 value = el.get('value')
+                merge = False
 
             if value.startswith('TESTPAD') \
                     or value.startswith('TP_') \
-                    or value.startswith('') == 'FIDUCIAL' \
-                    or value == 'GND' \
-                    or value.upper() == 'DNP':
+                    or value.upper() == 'GND' \
+                    or value.upper() == 'DNP' \
+                    or value.upper() == 'FIDUCIAL':
                 continue
 
             if not data.get(designator):
@@ -203,6 +263,9 @@ class ProjectBomLineImportWizard(models.TransientModel):
                     "libs": libs,
                     "x": elx,
                     "y": ely,
+                    "x_fiducial_1": elx - x_coordinate_fiducial_1,
+                    "y_fiducial_1": ely - y_coordinate_fiducial_1,
+                    "merge_package_value": merge,
                 }
 
             for a in el.iter('attribute'):
@@ -219,15 +282,18 @@ class ProjectBomLineImportWizard(models.TransientModel):
                             continue
                         data[designator]['options'][name].update({k.lower(): v})
                     # extra_fields[a.attrib['name']] = a.attrib['value']
+
         for designator, attribute in data.items():
             _logger.info(f"{designator}: {attribute}")
-            if attribute.get('options') and attribute['options'].get('mecid', False):
-                short_description = attribute['options']['MecID']
-            else:
+            if attribute.get('merge_package_value', False):
                 short_description = f"{attribute.get('package')}_{attribute.get('value')}"
+            else:
+                short_description = f"{attribute.get('value')}"
 
-            if attribute.get('options') and attribute['options'].get('artid', False):
-                default_code = attribute['options']['artid']
+            if attribute.get('options') and attribute['options'].get('MecID', False):
+                short_description = attribute['options']['MecID']
+            if attribute.get('options') and attribute['options'].get('ArtID', False):
+                default_code = attribute['options']['ArtID']
             else:
                 default_code = ""
 
@@ -235,22 +301,30 @@ class ProjectBomLineImportWizard(models.TransientModel):
                 short_description_option = attribute['options']['opt'].get('value', '')
             else:
                 short_description_option = ''
-
-            new_import_data.create({
+            theta = attribute.get('rot') and attribute['rot'][2] or 0.0
+            theta_txt = theta + float(self.panel_rotation)
+            value = {
                 'qty': 1.0,
                 'designator': designator,
                 'default_code': default_code,
                 'description': f"package:{attribute.get('package')} value: {attribute.get('value')}",
                 'short_description': short_description,
                 'short_description_option': short_description_option,
+                'short_description_semi_product': attribute.get('layer', ''),
                 'manufacturer_part': attribute.get('options')
-                                     and attribute['options'].get('manufacturer_part_number', '') and attribute['options']['manufacturer_part_number'].get('value') or ''
+                                     and attribute['options'].get('manufacturer_part_number', '') and
+                                     attribute['options']['manufacturer_part_number'].get('value') or ''
                                      or '',
                 'x_coordinate': attribute.get('x', 0.0),
                 'y_coordinate': attribute.get('y', 0.0),
-                'theta': attribute.get('rot') and attribute['rot'][2] or 0.0,
+                'x_coordinate_fiducial_1': attribute.get('x_fiducial_1', 0.0),
+                'y_coordinate_fiducial_1': attribute.get('y_fiducial_1', 0.0),
+                'theta': theta,
+                'theta_txt': theta_txt >= 360.0 and theta_txt - 360.0 or theta_txt,
                 'import_id': self.id,
-            })
+            }
+            _logger.info(f"{value}")
+            new_import_data.create(value)
 
     def _brd_update(self):
         if self.line_details:
@@ -267,21 +341,56 @@ class ProjectBomLineImportWizard(models.TransientModel):
                     text_layer = layer
                     break
 
-            for line in self.line_details.filtered(lambda r: r.product_id).sorted(lambda r: r.designator):
-                _logger.info(f"LINE {line} - {line.designator} - {line.product_id and line.product_id.name}")
+            for line in self.line_details.sorted(lambda r: r.designator):
+                # _logger.info(f"LINE {line} - {line.designator} - {line.product_id and line.product_id.name}")
                 for el in elements.iter('element'):
                     element_attrib = el.attrib
-                    _logger.info(f"element: {element_attrib}")
+                    # _logger.info(f"element: {element_attrib}")
                     if element_attrib['name'] == line.designator:
+                        value = el.get('value')
+
+                        if value.strip() in ['DNP', 'NC']:
+                            el.set('populate', 'no')
+                        else:
+                            el.set('populate', 'yes')
+
                         el.append(ET.Element('attribute', {
-                            'name': 'ArtID',
-                            'value': line.product_id.default_code,
+                            'name': 'theta',
+                            'value': "%.2f" % line.theta,
                             'y': element_attrib.get('y'),
                             'x': element_attrib.get('x'),
                             'size': '1.778',
                             'layer': text_layer.get('number'),
                             'display': 'off'
                         }))
+                        el.append(ET.Element('attribute', {
+                            'name': 'xFid1',
+                            'value': "%.3f" % line.x_coordinate_fiducial_1,
+                            'y': element_attrib.get('y'),
+                            'x': element_attrib.get('x'),
+                            'size': '1.778',
+                            'layer': text_layer.get('number'),
+                            'display': 'off'
+                        }))
+                        el.append(ET.Element('attribute', {
+                            'name': 'yFid1',
+                            'value': "%.3f" % line.y_coordinate_fiducial_1,
+                            'y': element_attrib.get('y'),
+                            'x': element_attrib.get('x'),
+                            'size': '1.778',
+                            'layer': text_layer.get('number'),
+                            'display': 'off'
+                        }))
+                        if line.product_id.default_code or line.product_id.product_tmpl_id.default_code:
+                            el.append(ET.Element('attribute', {
+                                'name': 'ArtID',
+                                'value': line.product_id.default_code or line.product_id.product_tmpl_id.default_code,
+                                'y': element_attrib.get('y'),
+                                'x': element_attrib.get('x'),
+                                'size': '1.778',
+                                'layer': text_layer.get('number'),
+                                'display': 'off'
+                            }))
                         if line.product_id.short_description or line.product_id.product_tmpl_id.short_description:
                             el.append(ET.Element('attribute', {
                                 'name': 'MecID',
@@ -293,18 +402,21 @@ class ProjectBomLineImportWizard(models.TransientModel):
                                 'display': 'off'
                             }))
                         if line.product_id.component_properties or line.product_id.product_tmpl_id.product_properties:
-                            component_properties = line.product_id.component_properties
-                            component_properties |= line.product_id.product_tmpl_id.product_properties
-                            for key, properties in component_properties.items():
-                                el.append(ET.Element('attribute', {
-                                    'name': key,
-                                    'value': properties,
-                                    'y': element_attrib.get('y'),
-                                    'x': element_attrib.get('x'),
-                                    'size': '1.778',
-                                    'layer': text_layer.get('number'),
-                                    'display': 'off'
-                                }))
+                            for component_properties in [line.product_id.component_properties, line.product_id.product_tmpl_id.product_properties]:
+                                if component_properties:
+                                    for key, properties in component_properties.items():
+                                        _logger.info(f"component_properties: {key}, {properties}")
+                                        if properties:
+                                            el.append(ET.Element('attribute', {
+                                                'name': key,
+                                                'value': str(properties),
+                                                'y': element_attrib.get('y'),
+                                                'x': element_attrib.get('x'),
+                                                'size': '1.778',
+                                                'layer': text_layer.get('number'),
+                                                'display': 'off'
+                                            }))
+                        _logger.info(f"element_attrib: {el.attrib}")
                         break
 
             self.data_file = base64.b64encode(ET.tostring(root, encoding='utf-8', xml_declaration=True))
@@ -340,24 +452,124 @@ class ProjectBomLineImportWizard(models.TransientModel):
                 'import_id': self.id
             })
 
+    def _txt_import(self):
+        data = {}
+        for record in self.data_file_external:
+            if record.filename.split('.')[-1] != 'txt':
+                continue
+            datas = base64.b64decode(record.datas)
+            lines = datas.splitlines()
+            _logger.info(f"{lines}")
+            index = ""
+            for line in lines:
+                line_split = line.split(b';')
+                line_split = list(map(lambda x: x.strip(), line_split))
+                if len(line_split) >= 1 and line_split[0] != b'':
+                    _logger.info(f"line_split: {line_split}")
+                    if line_split[0].startswith(b'#') and line_split[0].split(b' ')[0] not in [b'#P', b'#R', b'#C']:
+                        continue
+                    if line_split[0].startswith(b'#'):
+                        index = line_split[0].decode()
+                    if not data.get(index):
+                        data[index] = []
+                    data[index] += list(map(lambda x: x.decode(), line_split[1:]))
+
+        for key, line in data.items():
+            _logger.info(f"data {key}-{line}")
+            if key.startswith('#C'):
+                line_to_save = self.line_details.filtered(lambda r: r.designator == line[0])
+                _logger.info(f"line: {key}-{line_to_save}-{line}")
+                if line_to_save:
+                    line_to_save.write({
+                        'theta_txt': line[1],
+                        'x_coordinate_fiducial_1_txt': line[2],
+                        'y_coordinate_fiducial_1_txt': line[3],
+                    })
+
+    def _pnp_update(self):
+        file_name = self.filename.split('.')[0]
+        self.data_file_external.filtered(lambda r: r.filename.startswith(file_name + '.txt')).unlink()
+
+        designation = self.project_bom_id.product_tmpl_id.display_name
+        barcode = self.project_bom_id.product_tmpl_id.barcode or '---'
+        scale = 1.000
+        file_code = '---'
+        customer_code = self.env.user.company_id.partner_id.ref or '---'
+        date = fields.Date.today().strftime('%d/%m/%y')
+        comments = self.comments or 'No cooments'
+        user = self.env.user.name
+        date_create = self.project_bom_id.create_date
+        date_write = self.project_bom_id.write_date
+        width = 177.0
+        thickness = 1.6
+        library = 'ITEM'
+        length = 177.0
+
+        reserved = '0'
+        board_alignment = '2'
+        rejection = '2'
+        component_electrical_test = '0'
+        fiducial_mark_colour = '2'
+        rejection_mark_colour = '2'
+
+        pnp_file_f = ["#D BASE"]
+        pnp_file_b = ["#D BASE"]
+        file_name_f = file_name + "F"
+        file_name_b = file_name + "B"
+
+        pnp_items_f = []
+        pnp_items_b = []
+        pnp_file_f.append(f"#P {file_name_f:<20};{designation:<40};{barcode:<20};{scale:.3f};{file_code:<20};{customer_code:<20};"
+                          f"{date};{comments:<72};{user.split(' ')[0]:<12};{date_create.strftime('%d/%m/%y')};{date_create.strftime('%H:%M')};"
+                          f"{user.split(' ')[-1]:<12};{date_write.strftime('%d/%m/%y')};{date_write.strftime('%H:%M')};"
+                          f"{width:.4f};{thickness:.3f};{library:<8};{length:.4f};1.000")
+        pnp_file_f.append(f"#M sideF{file_name:<8};0.000;0.000;0.000")
+        pnp_file_b.append(f"#P {file_name_b:<20};{designation:<40};{barcode:<20};{scale:.3f};{file_code:<20};{customer_code:<20};"
+                          f"{date};{comments:<72};{user.split(' ')[0]:<12};{date_create.strftime('%d/%m/%y')};{date_create.strftime('%H:%M')};"
+                          f"{user.split(' ')[-1]:<12};{date_write.strftime('%d/%m/%y')};{date_write.strftime('%H:%M')};"
+                          f"{width:.4f};{thickness:.3f};{library:<8};{length:.4f};1.000")
+        pnp_file_f.append(f"#M sideB{file_name:<8};0.000;0.000;0.000")
+
+        for line in self.line_details:
+            default_code = line.product_id.default_code or line.product_id.product_tmpl_id.default_code
+            if line.short_description_semi_product == 'F' and default_code:
+                pnp_items_f.append(f"#I {default_code:<16};{line.product_id.name};")
+                pnp_file_f.append(f"#C {default_code};{line.designator:<8};{line.theta:.3f};{line.x_coordinate_fiducial_1_txt:.3f};{line.y_coordinate_fiducial_1_txt:.3f}")
+            elif line.short_description_semi_product == 'B' and default_code:
+                pnp_items_b.append(f"#I {default_code:<16};{line.product_id.name};")
+                pnp_file_b.append(f"#C {default_code};{line.designator:<8};{line.theta:.3f};{line.x_coordinate_fiducial_1_txt:.3f};{line.y_coordinate_fiducial_1_txt:.3f}")
+        pnp_file_f.append([f"#K {reserved:<9};{board_alignment:<9};{rejection:<9};{component_electrical_test:<9};"
+                           f"{fiducial_mark_colour:<9};{rejection_mark_colour:<9}"])
+        pnp_file_f += ["#F", ""]
+        pnp_items_f += ["#F", ""]
+        pnp_file_f += pnp_items_f
+
+        pnp_file_b += ["#F", ""]
+        pnp_items_b += ["#F", ""]
+        pnp_file_b += pnp_items_b
+        _logger.info(f"{pnp_file_f}\n{pnp_file_b}")
+        self.data_file_external = [Command.create({
+            'filename': file_name_f + '.txt',
+            'datas': base64.b64encode('\n\r'.join(pnp_file_f).encode()),
+            'name': file_name_f + '.txt',
+        }), Command.create({
+            'filename': file_name_b + '.txt',
+            'datas': base64.b64encode('\n\r'.join(pnp_file_b).encode()),
+            'name': file_name_b + '.txt',
+        })]
+
+    def _get_mimetype(self):
+        file_extension = self.filename.split('.')[-1]
+        if MIMETYPES.get(file_extension):
+            return MIMETYPES[file_extension]
+        return False
+
     def action_upload(self):
         self.ensure_one()
 
         if self.data_file:
-            file_extension = self.filename.split('.')[-1]
-            if file_extension == 'csv':
-                mimetype = 'text/csv'
-            elif file_extension == 'xls':
-                mimetype = 'application/vnd.ms-excel'
-            elif file_extension == 'xlsx':
-                mimetype = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            elif file_extension == 'ods':
-                mimetype = 'application/vnd.oasis.opendocument.spreadsheet'
-            elif file_extension == 'sch':
-                mimetype = 'application/x-schematics'
-            elif file_extension == 'brd':
-                mimetype = 'application/eagle+xml'
-            else:
+            mimetype = self._get_mimetype()
+            if not mimetype:
                 raise UserError('Unsupported file format. Please upload a CSV, XLS, or XLSX file.')
 
             if self.line_details:
@@ -368,12 +580,20 @@ class ProjectBomLineImportWizard(models.TransientModel):
                             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                             'application/vnd.oasis.opendocument.spreadsheet'
                             ]:
+                self.filename_mimetype = mimetype
                 self._base_internal_import(mimetype)
-
-            elif mimetype == 'application/x-schematics':
-                self._sch_import()
             elif mimetype == 'application/eagle+xml':
+                self.filename_mimetype = mimetype
+                _logger.info(f"Starting parce brd file")
                 self._brd_import()
+
+            if self.filename_sch and self.filename_sch.split('.')[-1] == 'sch':
+                _logger.info(f"Starting parce sch file")
+                self._sch_import()
+
+            if self.data_file_external:
+                _logger.info(f"Starting parce txt file")
+                self._txt_import()
 
         self._validate_data()
         action = self.env.ref('project_bom.action_custom_import_wizard', raise_if_not_found=False)
@@ -405,12 +625,36 @@ class ProjectBomLineImportWizard(models.TransientModel):
                 'semi_product_id': self.semi_product_id.id,
             })
 
+    def action_brd(self):
+        self.ensure_one()
+        self._brd_update()
+        return {
+            'name': _('Import BOM Line Details'),
+            'view_mode': 'form',
+            'res_model': 'project.bom.line.details.import.wizard',
+            'type': 'ir.actions.act_window',
+            'res_id': self.id,
+            'target': 'new',
+        }
+
+    def action_pnp(self):
+        self.ensure_one()
+        self._pnp_update()
+        return {
+            'name': _('Import BOM Line Details'),
+            'view_mode': 'form',
+            'res_model': 'project.bom.line.details.import.wizard',
+            'type': 'ir.actions.act_window',
+            'res_id': self.id,
+            'target': 'new',
+        }
+
     def action_html(self):
         self.ensure_one()
 
         config_ibom = Config(version, config.rcfile)
-        config_ibom.show_fields = ['Value', 'Footprint', 'MANUFACTURER_PART_NUMBER', 'OPT', 'MecID', 'ArtID']
-        self._brd_update()
+        config_ibom.show_fields = ['Value', 'Footprint', 'MANUFACTURER_PART_NUMBER', 'OPT', 'MecID', 'ArtID', 'theta', 'xFid1', 'yFid1']
+        # self._brd_update()
 
         parser = FusionEagleParser(
             False,
@@ -494,6 +738,19 @@ class ProjectBomLineImportWizard(models.TransientModel):
                     error_message.append(_('Product not found. The technical description '
                                            'or default code are not matching any product.'))
                     line_valid = False
+            if line.short_description_semi_product:
+                found_products = self.env['product.product'].search([
+                    ('id', '=', self.semi_product_id.id),
+                    '|',
+                    ('short_description', 'like', line.short_description_semi_product.strip()),
+                    ('product_tmpl_id.short_description', 'like', line.short_description_semi_product.strip())
+                ])
+                if found_products:
+                    line.semi_product_id = found_products[0].id
+                    line.semi_product_tmpl_id = found_products[0].product_tmpl_id.id
+                    if len(found_products) > 1:
+                        error_message.append(
+                            _(f"{'To many semi products found with some technical description or default code'}"))
 
             if line.short_description_option and not line.short_description_option != '_' and line.type == 'kit':
                 found_products = self.env['product.product'].search([
@@ -526,3 +783,16 @@ class ProjectBomLineImportWizard(models.TransientModel):
                 is_valid = False
 
         self.validated = is_valid
+
+    @api.onchange('filename')
+    def onchange_filename(self):
+        for record in self:
+            if record.filename:
+                record.filename_mimetype = record._get_mimetype()
+
+    @api.onchange('panel_rotation')
+    def onchange_panel_rotation(self):
+        for record in self:
+            for line in record.line_details:
+                theta = line.theta + float(record.panel_rotation)
+                line.theta_txt = theta >= 360.0 and theta - 360.0 or theta
