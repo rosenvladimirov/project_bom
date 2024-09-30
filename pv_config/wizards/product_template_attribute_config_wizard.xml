@@ -1,0 +1,28 @@
+<odoo>
+    <data>
+        <record id="product_template_attribute_config_wizard_form_view" model="ir.ui.view">
+            <field name="name">prod.var.config.wizard.form</field>
+            <field name="model">prod.var.config.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Configure Product Template Attributes">
+                    <group>
+                        <field name="product_tmpl_configuration_ids" widget="x2many_2d_matrix"
+                               field_x_axis="configuration_attribute_line_header_value"
+                               field_y_axis="configuration_attribute_line_value"
+                               field_value="configuration_attribute_is_valid">
+                            <tree string="Product Template Attributes">
+                                <field name="configuration_attribute_line_header_value"/>
+                                <field name="configuration_attribute_line_value"/>
+                                <field name="configuration_attribute_is_valid"/>
+                            </tree>
+                        </field>
+                    </group>
+                    <footer>
+                        <button name="action_configure_product_template_attributes" string="Ok" type="object"
+                                class="oe_highlight"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+    </data>
+</odoo>

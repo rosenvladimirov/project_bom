@@ -1,0 +1,20 @@
+<odoo>
+    <data>
+        <record id="product_template_attributes_form_ex" model="ir.ui.view">
+            <field name="name">product.template.form.ex</field>
+            <field name="model">product.template</field>
+            <field name="inherit_id" ref="product.product_template_only_form_view"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='value_ids']" position="after">
+                    <field name="is_configuration_attribute"/>
+                </xpath>
+                <xpath expr="//button[@name='action_open_label_layout']" position="after">
+                    <field name="configuration_attribute_line_values" invisible="1"/>
+                    <button name="action_open_product_configurator" string="Open Product Variant Configurator" type="object" class="oe_highlight"
+                        invisible="not configuration_attribute_line_values"/>
+                </xpath>
+            </field>
+
+        </record>
+    </data>
+</odoo>

@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_prod_var_config_wizard_user,prod.var.config.wizard user,model_prod_var_config_wizard,base.group_user,1,1,1,1
+access_prod_templ_config_user,prod.templ.config user,model_prod_templ_config,base.group_user,1,1,1,1
