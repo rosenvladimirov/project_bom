@@ -30,13 +30,11 @@
                                        string="Attach a file"
                                        nolabel="1"
                                        colspan="2"
-                                       context="{'default_import_id': active_id}"
                                        invisible="filename_mimetype != 'application/eagle+xml'"/>
-
-                                <field name="data_file_html"
-                                       filename="filename_html"
-                                       invisible="filename_mimetype != 'application/eagle+xml' and not filename_html"/>
-                                <field name="filename_html" invisible="1"/>
+<!--                                <field name="data_file_html"-->
+<!--                                       filename="filename_html"-->
+<!--                                       invisible="filename_mimetype != 'application/eagle+xml' and not filename_html"/>-->
+<!--                                <field name="filename_html" invisible="1"/>-->
 <!--                                <div colspan="2" invisible="filename_mimetype != 'application/eagle+xml'">-->
 <!--                                    <button string="BOM View" name="action_html" type="object" class="btn-primary"/>-->
 <!--                                </div>-->
