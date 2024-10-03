@@ -67,7 +67,7 @@ class ProjectBomLineImportWizard(models.TransientModel):
     #                                       string='PnP Files')
     data_file_external = fields.Many2many('ir.attachment',
                                           relation='ir_attachment_import_wizard_rel',
-                                          string='PnP Files')
+                                          string='External Files')
 
     panel_rotation = fields.Selection([
         ('0', _('0 degrees')),
@@ -308,30 +308,32 @@ class ProjectBomLineImportWizard(models.TransientModel):
                     # extra_fields[a.attrib['name']] = a.attrib['value']
 
         for designator, attribute in data.items():
-            # _logger.info(f"{designator}: {attribute}")
+            _logger.info(f"{designator}: {attribute}")
             if attribute.get('merge_package_value', False):
                 short_description = f"{attribute.get('package')}_{attribute.get('value')}"
             else:
                 short_description = f"{attribute.get('value')}"
 
-            if attribute.get('options') and attribute['options'].get('MecID', False):
-                short_description = attribute['options']['MecID']
-            if attribute.get('options') and attribute['options'].get('ArtID', False):
-                default_code = attribute['options']['ArtID']
+            if attribute.get('options') and attribute['options'].get('mecid', False):
+                short_description = attribute['options']['mecid'].get('value', False)
+
+            if attribute.get('options') and attribute['options'].get('artid', False):
+                default_code = attribute['options']['artid'].get('value', False)
             else:
-                default_code = ""
+                default_code = False
 
             if attribute.get('options') and attribute['options'].get('opt'):
-                short_description_option = attribute['options']['opt'].get('value', '')
+                short_description_option = attribute['options']['opt'].get('value', False)
             else:
-                short_description_option = ''
+                short_description_option = False
+
             theta = attribute.get('rot') and attribute['rot'][2] or 0.0
             theta_txt = theta + float(self.panel_rotation)
             value = {
                 'qty': 1.0,
                 'designator': designator,
                 'default_code': default_code,
-                'description': f"package:{attribute.get('package')} value: {attribute.get('value')}",
+                # 'description': f"package:{attribute.get('package')} value: {attribute.get('value')}",
                 'short_description': short_description,
                 'short_description_option': short_description_option,
                 'short_description_semi_product': attribute.get('layer', ''),
@@ -351,6 +353,11 @@ class ProjectBomLineImportWizard(models.TransientModel):
             new_import_data.create(value)
 
     def _brd_update(self):
+        def rot(rot_string):
+            if not rot_string:
+                return False, False, 0.0
+            return 'M' in rot_string, 'S' in rot_string, float(''.join(d for d in rot_string if d in string.digits + '.'))
+
         if self.line_details:
             root = ET.fromstring(base64.b64decode(self.data_file))
             board = root.find('drawing').find('board')
@@ -366,13 +373,25 @@ class ProjectBomLineImportWizard(models.TransientModel):
                     break
 
             for line in self.line_details.sorted(lambda r: r.designator):
-                # _logger.info(f"LINE {line} - {line.designator} - {line.product_id and line.product_id.name}")
+                # _logger.info(f"LINE {line.designator} - {line.product_id and line.product_id.name}")
                 for el in elements.iter('element'):
                     element_attrib = el.attrib
                     # _logger.info(f"element: {element_attrib}")
                     if element_attrib['name'] == line.designator:
-                        value = el.get('value')
-
+                        value = element_attrib.get('value')
+                        elr = rot(element_attrib.get('rot'))
+                        theta_txt = elr[2] + 180
+                        if theta_txt >= 360:
+                            theta_txt -= 360
+                        if element_attrib.get('rot') and theta_txt == line.theta_txt:
+                            _logger.info(f"theta {line.designator}: {theta_txt} != {elr[2]}")
+                            if elr[2] % 1 == 0:
+                                theta_txt = f"{theta_txt:.0f}"
+                                theta = f"{elr[2]:.0f}"
+                            else:
+                                theta_txt = f"{theta_txt:.3f}"
+                                theta = f"{elr[2]:.3f}"
+                            el.set('rot', f"{element_attrib['rot'].replace(theta, theta_txt)}")
                         if value.strip() in ['DNP', 'NC']:
                             el.set('populate', 'no')
                         else:
@@ -446,6 +465,7 @@ class ProjectBomLineImportWizard(models.TransientModel):
             self.data_file = base64.b64encode(ET.tostring(root, encoding='utf-8', xml_declaration=True))
 
     def _sch_import(self):
+        current_data = self.line_details
         new_import_data = self.env['project.bom.line.details.import.data']
         sch_root = ET.fromstring(base64.b64decode(self.data_file))
         drawing = sch_root.find("drawing")
@@ -462,19 +482,22 @@ class ProjectBomLineImportWizard(models.TransientModel):
             part_attrib = part.attrib
             if not part_attrib.get('device'):
                 continue
-            short_description = f"{part_attrib.get('device')}_{part_attrib.get('value')}"
-            product_id = self.env['product.product'].search([
-                ('short_description', 'ilike', short_description)
-            ], limit=1)
-            new_import_data.create({
-                'qty': 1.0,
-                'designator': part_attrib.get('name'),
-                'default_code': product_id and product_id.default_code or '',
-                'description': f"library: {part_attrib.get('library')} device set:{part_attrib.get('deviceset')}",
-                'product_id': product_id and product_id.id or False,
-                'short_description': short_description,
-                'import_id': self.id
-            })
+            designator = part_attrib.get('name')
+            current_line = current_data.filtered(lambda r: r.designator.strip() == designator.strip())
+            if not current_line:
+                short_description = f"{part_attrib.get('device')}_{part_attrib.get('value')}"
+                product_id = self.env['product.product'].search([
+                    ('short_description', 'ilike', short_description)
+                ], limit=1)
+                new_import_data.create({
+                    'qty': 1.0,
+                    'designator': designator,
+                    'default_code': product_id and product_id.default_code or '',
+                    'description': f"library: {part_attrib.get('library')} device set:{part_attrib.get('deviceset')}",
+                    'product_id': product_id and product_id.id or False,
+                    'short_description': short_description,
+                    'import_id': self.id
+                })
 
     def _external_import(self):
         for record in self.data_file_external:

@@ -18,6 +18,7 @@
     ],
     'data': [
         'security/ir.model.access.csv',
+        'views/res_users_views.xml',
         'views/project_bom_menuitems.xml',
         'views/project_mrp_bom_views.xml',
         'views/project_mrp_bom_line_views.xml',

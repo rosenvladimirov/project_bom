@@ -1,26 +1,65 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from odoo import api, fields, models, tools, _
+from odoo import api, fields, models, _
+
+NEXAR_PART_ATTRIBUTES = """
+query specAttributes(
+    $mpn: String!
+    $limit: Int
+){
+  supSearchMpn(
+    q: $mpn
+    limit: $limit
+    ) {
+    hits
+    results {
+      part {
+        id
+        name
+        mpn
+        specs {
+          attribute {
+            name
+            id
+            shortname
+          }
+          displayValue
+        }      
+      }
+    }
+  }
+}
+"""
+NEXAR_ALTERNATIVE_PART = """query findAlternativeParts(
+    $mpn: String!
+    $limit: Int
+) {
+  supSearchMpn(
+    q: $mpn
+    limit: $limit
+    ) {
+    hits
+    results {
+      part {
+        similarParts {
+          name
+          octopartUrl
+          mpn
+        }
+      }
+    }
+  }
+}"""
 
 
 class ProductProduct(models.Model):
     _inherit = "product.product"
 
+    direct_standard_price = fields.Float('Cost', company_dependent=True)
     # CAD additional information
-    short_description = fields.Char('Technical Description',
-                                    size=40,
-                                    default=lambda self: self.product_tmpl_id.short_description)
-    # component_package = fields.Char('Package', related='product_tmpl_id.component_package', store=True)
-    # component_value = fields.Float('Value', related='product_tmpl_id.component_value', store=True)
-    # component_voltage = fields.Float('Voltage', related='product_tmpl_id.component_voltage', store=True)
-    # component_other = fields.Char('Temperature/Tolerance', related='product_tmpl_id.component_other', store=True)
-    #
-    # x_coordinate = fields.Float(string='X Coordinate', default=lambda self: self.product_tmpl_id.x_coordinate)
-    # y_coordinate = fields.Float(string='Y Coordinate', default=lambda self: self.product_tmpl_id.y_coordinate)
-    component_type_id = fields.Many2one('component.definition.properties',
-                                        related='product_tmpl_id.component_type_id',
-                                        store=True)
+    short_description = fields.Char('Technical Description', size=40)
+    component_type_id = fields.Many2one('component.definition.properties', 'Definition properties',)
     component_properties = fields.Properties('Component technical data',
                                              definition='component_type_id.component_properties_definition')
 
@@ -37,3 +76,53 @@ class ProductProduct(models.Model):
             domain += ['|', ('short_description', operator, name),
                        ('product_tmpl_id.short_description', operator, name)]
         return super()._name_search(name, domain=domain, operator=operator, limit=limit, order=order)
+
+    @api.onchange('short_description')
+    def _onchange_short_description(self):
+        for record in self:
+            if record.short_description \
+                    and record.product_tmpl_id.short_description != record.short_description \
+                    and record.product_tmpl_id.product_variant_count == 1:
+                record.product_tmpl_id.short_description = record.short_description
+
+    @api.onchange('component_type_id')
+    def _onchange_component_type_id(self):
+        for record in self:
+            if record.component_type_id \
+                    and record.product_tmpl_id.component_type_id != record.component_type_id \
+                    and record.product_tmpl_id.product_variant_count == 1:
+                record.product_tmpl_id.component_type_id = record.component_type_id
+
+    @api.onchange('component_properties')
+    def _onchange_component_properties(self):
+        for record in self:
+            if record.product_tmpl_id.product_variant_count == 1:
+                record.product_tmpl_id.component_properties = record.component_properties
+
+    def action_update_nextar_data(self):
+        for record in self:
+            all_properties = self.read(['component_properties'])[0]['component_properties']
+            component_properties = list(filter(lambda x: x['string'] == 'mpn', all_properties))
+            current_component_properties = record.component_properties or {}
+            for component_properties in component_properties:
+                if component_properties.get('string', '') == 'mpn' and component_properties.get('value', False):
+                    mpn = component_properties['value']
+                    query = NEXAR_PART_ATTRIBUTES
+                    status, response, ask_time = self.env.user._do_request('', json={
+                        "query": query,
+                        "variables": {
+                            'mpn': mpn,
+                            'limit': 1
+                        }
+                    })
+                    data = response.get('data')
+                    for result in data.get("supSearchMpn",{}).get("results",{}):
+                        for part in result.get("part",{}).get("specs",{}):
+                            if part.get('attribute').get('name') == 'mpm':
+                                continue
+                            for curr in list(filter(lambda x: x['string'] == part.get('attribute').get('name'), all_properties)):
+                                current_component_properties.update({
+                                    curr.get('name'): part.get('displayValue')
+                                })
+                    record.component_properties = current_component_properties
+                    # record.product_tmpl_id._compute_component_properties()

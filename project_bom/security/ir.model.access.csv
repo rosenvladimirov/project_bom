@@ -19,3 +19,4 @@ access_component_definition_packages_users,component.definition.packages user,mo
 access_component_definition_packages_managers,component.definition.packages manager,model_component_definition_packages,mrp.group_mrp_manager,1,1,1,1
 access_component_definition_properties_users,component.definition.properties user,model_component_definition_properties,mrp.group_mrp_user,1,1,1,0
 access_component_definition_properties_managers,component.definition.properties manager,model_component_definition_properties,mrp.group_mrp_manager,1,1,1,1
+access_nexar_client_mixin_users,nexar.client.mixin user,model_nexar_client_mixin,base.group_user,1,1,1,1

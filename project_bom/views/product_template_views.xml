@@ -8,18 +8,26 @@
 <!--            <xpath expr="//field[@name='categ_id']" position="after">-->
 <!--                <field name="product_type_id"/>-->
 <!--            </xpath>-->
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_update_nextar_data"
+                        type="object"
+                        class="oe_stat_button"
+                        string="Octpart"
+                        icon="fa-database"/>
+            </xpath>
             <xpath expr="//notebook/page[@name='general_information']" position="after">
-                <page string="Project BOM data" name="project_bom_data" invisible="product_variant_count &gt; 1">
+                <page string="Electrical data" name="project_bom_data" invisible="product_variant_count &gt; 1">
                     <group>
                         <group string="Other data">
                             <field name="short_description"/>
                             <field name="component_type_id"/>
                         </group>
-                        <separator string="Technical data" invisible="not component_type_id"/>
-                        <div class="d-flex" invisible="not component_type_id">
+                        <separator string="Technical data" invisible="not component_type_id" colspan="4"/>
+                        <div class="d-flex" invisible="not component_type_id" colspan="4">
                             <field name="component_properties"
                                    nolabel="1"
-                                   columns="2"
+                                   columns="4"
+                                   colspan="4"
                                    hideKanbanOption="0"
                                    invisible="not component_type_id"/>
                         </div>
