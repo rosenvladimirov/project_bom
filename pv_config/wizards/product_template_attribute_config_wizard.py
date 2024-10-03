@@ -1,6 +1,32 @@
 from odoo import models, fields, api
 
 
+def render_matrix(self, product_templ_id):
+    product_tmpl_configuration_ids = []
+    old_product_tmpl_configuration_ids = self.product_tmpl_configuration_ids
+    if product_templ_id.configuration_attribute_line_header_values and product_templ_id.configuration_attribute_line_values:
+        for header_value in product_templ_id.configuration_attribute_line_header_values:
+            for value in product_templ_id.configuration_attribute_line_values:
+                if self.product_tmpl_configuration_ids:
+                    config = old_product_tmpl_configuration_ids.filtered(
+                        lambda r: r.configuration_attribute_line_header_value.id == header_value.id and r.configuration_attribute_line_value.id == value.id)
+                    if config and len(config) > 0:
+                        is_valid_config = config[0].configuration_attribute_is_valid
+                    else:
+                        is_valid_config = False
+                else:
+                    is_valid_config = False
+
+                product_tmpl_configuration_ids.append((0, 1, {
+                    'configuration_attribute_line_header_value': header_value.id,
+                    'configuration_attribute_line_value': value.id,
+                    'configuration_attribute_is_valid': is_valid_config,
+                }))
+
+    product_templ_id.product_tmpl_configuration_ids = False
+    return product_tmpl_configuration_ids
+
+
 class ProductTemplateAttributeConfig(models.Model):
     _name = 'prod.var.config.wizard'
     _description = 'Product Template Attribute Configuration'
@@ -25,18 +51,32 @@ class ProductTemplateAttributeConfig(models.Model):
         return record
 
     def render_matrix(self):
-        if self.product_tmpl_configuration_ids:
-            return
-        product_tmpl_configuration_ids = []
-        if self.product_tmpl_id and self.product_tmpl_id.configuration_attribute_line_header_values and self.product_tmpl_id.configuration_attribute_line_values:
-            for header_value in self.product_tmpl_id.configuration_attribute_line_header_values:
-                for value in self.product_tmpl_id.configuration_attribute_line_values:
-                    product_tmpl_configuration_ids.append((0, 0, {
-                        'configuration_attribute_line_header_value': header_value.id,
-                        'configuration_attribute_line_value': value.id,
-                        'configuration_attribute_is_valid': False,
-                    }))
-        self.product_tmpl_id.product_tmpl_configuration_ids = product_tmpl_configuration_ids
+        if self.product_tmpl_id:
+            ids = render_matrix(self, self.product_tmpl_id)
+            self.product_tmpl_configuration_ids = ids
+            if self.product_tmpl_id.configuration_attribute_line_header_values and self.product_tmpl_id.configuration_attribute_line_values:
+                for header_value in self.product_tmpl_id.configuration_attribute_line_header_values:
+                    for value in self.product_tmpl_id.configuration_attribute_line_values:
+                        config = self.product_tmpl_configuration_ids.filtered(
+                            lambda r: r.configuration_attribute_line_header_value.id == header_value.id and r.configuration_attribute_line_value.id == value.id)
+
+                        header_template_value = self.env['product.template.attribute.value'].search([
+                            ('product_tmpl_id', '=', self.product_tmpl_id.id),
+                            ('attribute_id', '=', header_value.attribute_id.id),
+                            ('product_attribute_value_id', '=', header_value.id),
+                        ])
+
+                        if len(header_template_value) > 0 and len(config) > 0:
+                            header_template_value[0].configuration_product_template_attribute_value = config[0]
+
+                        value_template_value = self.env['product.template.attribute.value'].search([
+                            ('product_tmpl_id', '=', self.product_tmpl_id.id),
+                            ('attribute_id', '=', value.attribute_id.id),
+                            ('product_attribute_value_id', '=', value.id),
+                        ])
+
+                        if len(value_template_value) > 0 and len(config) > 0:
+                            value_template_value[0].configuration_product_template_attribute_value = config[0]
 
     def action_configure_product_template_attributes(self):
         self.ensure_one()

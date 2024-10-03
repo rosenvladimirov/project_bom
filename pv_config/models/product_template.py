@@ -1,3 +1,5 @@
+from stdnum.bitcoin import is_valid
+
 from odoo import models, fields, api
 
 
@@ -37,12 +39,6 @@ class ProductTemplate(models.Model):
         for record in self:
             new_lines = record.configuration_attribute_line_ids[1:].mapped('value_ids')
             record.configuration_attribute_line_values = new_lines
-
-    def write(self, vals):
-        res = super(ProductTemplate, self).write(vals)
-        if 'attribute_line_ids' in vals:
-            self.product_tmpl_configuration_ids.unlink()
-        return res
 
     product_tmpl_configuration_ids = fields.Many2many(
         'prod.templ.config',
