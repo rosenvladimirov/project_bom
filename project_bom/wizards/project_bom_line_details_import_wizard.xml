@@ -17,37 +17,59 @@
                             <group>
                                 <field name="data_file" filename="filename"/>
                                 <field name="filename" invisible="1"/>
-                                <field name="data_file_sch" filename="filename_sch"/>
-                                <field name="filename_sch" invisible="1"/>
-                                <field name="data_file_html" filename="filename_html"/>
-                                <field name="filename_html" invisible="1"/>
+                                <field name="filename_mimetype" invisible="1"/>
 
-                                <div colspan="2" invisible="not filename">
-                                    <button string="BOM View" name="action_html" type="object" class="btn-primary"/>
-                                </div>
+                                <field name="panel_rotation" invisible="filename_mimetype != 'application/eagle+xml'"/>
+                                <field name="data_file_sch"
+                                       filename="filename_sch"
+                                       invisible="filename_mimetype != 'application/eagle+xml'"/>
+                                <field name="filename_sch" invisible="1"/>
+
+                                <field name="data_file_external"
+                                       widget="many2many_binary"
+                                       string="Attach a file"
+                                       nolabel="1"
+                                       colspan="2"
+                                       invisible="filename_mimetype != 'application/eagle+xml'"/>
+<!--                                <field name="data_file_html"-->
+<!--                                       filename="filename_html"-->
+<!--                                       invisible="filename_mimetype != 'application/eagle+xml' and not filename_html"/>-->
+<!--                                <field name="filename_html" invisible="1"/>-->
+<!--                                <div colspan="2" invisible="filename_mimetype != 'application/eagle+xml'">-->
+<!--                                    <button string="BOM View" name="action_html" type="object" class="btn-primary"/>-->
+<!--                                </div>-->
                             </group>
+                            <field name="comments" nolabel="1" placeholder="Please add descriptions" colspan="4"/>
                         </group>
                         <separator string="Uploaded data" invisible="not line_details"/>
                         <field name="line_details" nolabel="1" invisible="not line_details" can_create="0">
                             <tree string="Project BOM Line Details Import Data"
                                   decoration-danger="not is_valid"
                                   decoration-success="is_valid" editable="bottom">
-                                <field name="is_valid" column_invisible="0" readonly="0"/>
+                                <field name="is_valid" column_invisible="0" readonly="0" optional="show" string="*"/>
+                                <field name="semi_product_tmpl_id" readonly="0" force_save="1" optional="show"/>
+                                <field name="short_description_semi_product" column_invisible="1"/>
+                                <field name="semi_product_id" readonly="0" force_save="1" optional="show"/>
                                 <field name="qty" readonly="1" force_save="1"/>
                                 <field name="designator" readonly="1" force_save="1"/>
                                 <field name="default_code" readonly="1" force_save="1"/>
-                                <field name="description" readonly="1" force_save="1"/>
+                                <field name="description" readonly="1" force_save="1" optional="hide"/>
                                 <field name="short_description" readonly="1" force_save="1"/>
                                 <field name="product_id" readonly="0" force_save="1"/>
                                 <field name="short_description_option" readonly="1" force_save="1"/>
                                 <field name="possible_bom_product_template_attribute_value_ids" column_invisible="1"/>
-                                <field name="bom_product_template_attribute_value_ids"/>
-                                <field name="hw_option" can_create="0" can_write="0" domain="[('is_kits', '=', True)]"/>
-                                <field name="error_message" readonly="1" force_save="1"/>
+                                <field name="bom_product_template_attribute_value_ids" optional="show"/>
+                                <field name="hw_option" can_create="0" can_write="0" domain="[('is_kits', '=', True)]" optional="show"/>
+                                <field name="error_message" readonly="1" force_save="1" optional="show"/>
                                 <field name="manufacturer_part" optional="hide"/>
                                 <field name="x_coordinate" optional="hide"/>
                                 <field name="y_coordinate" optional="hide"/>
+                                <field name="x_coordinate_fiducial_1" optional="hide"/>
+                                <field name="y_coordinate_fiducial_1" optional="hide"/>
                                 <field name="theta" optional="hide"/>
+                                <field name="x_coordinate_fiducial_1_txt" optional="hide"/>
+                                <field name="y_coordinate_fiducial_1_txt" optional="hide"/>
+                                <field name="theta_txt" optional="hide"/>
                             </tree>
                         </field>
                         <footer>
@@ -62,11 +84,21 @@
                                     class="btn-primary"
                                     invisible="not validated"/>
                             <button string="Cancel" class="btn-secondary" special="cancel"/>
-<!--                            <button string="BOM View"-->
-<!--                                    name="action_html"-->
-<!--                                    type="object"-->
-<!--                                    class="btn-primary"-->
-<!--                                    invisible="not filename"/>-->
+                            <button string="BOM View"
+                                    name="action_html"
+                                    type="object"
+                                    class="btn-secondary"
+                                    invisible="filename_mimetype != 'application/eagle+xml'"/>
+                            <button string="BRD Fix"
+                                    name="action_brd"
+                                    type="object"
+                                    class="btn-secondary"
+                                    invisible="filename_mimetype != 'application/eagle+xml'"/>
+                            <button string="PnP Create"
+                                    name="action_pnp"
+                                    type="object"
+                                    class="btn-secondary"
+                                    invisible="filename_mimetype != 'application/eagle+xml'"/>
                         </footer>
                     </sheet>
                 </form>

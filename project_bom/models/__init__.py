@@ -1,3 +1,5 @@
+from . import nexar_client
+from . import res_users
 from . import component_definition
 from . import product_template
 from . import project_product_types

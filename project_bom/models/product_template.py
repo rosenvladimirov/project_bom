@@ -38,10 +38,22 @@ class ProductTemplate(models.Model):
         compute='_compute_project_bom_count')
 
     # CAD additional information
-    short_description = fields.Char('Technical Description', size=40)
-    component_type_id = fields.Many2one('component.definition.properties', 'Component Type')
+    short_description = fields.Char('Technical Description',
+                                    size=40,
+                                    compute='_compute_short_description',
+                                    inverse='_inverse_short_description',
+                                    store=True)
+    component_type_id = fields.Many2one('component.definition.properties',
+                                        compute='_compute_component_type_id',
+                                        inverse='_inverse_component_type_id',
+                                        string='Component Type',
+                                        store=True)
     component_properties = fields.Properties('Component technical data',
-                                             definition='component_type_id.component_properties_definition')
+                                             compute='_compute_component_properties',
+                                             inverse='_inverse_component_properties',
+                                             definition='component_type_id.component_properties_definition',
+                                             store=True,
+                                             )
 
     # component_package = fields.Char('Package')
     # component_value = fields.Float('Value')
@@ -74,9 +86,43 @@ class ProductTemplate(models.Model):
         products = self.env['product.product'].search([('direct_standard_price', operator, value)], limit=None)
         return [('id', 'in', products.mapped('product_tmpl_id').ids)]
 
+    @api.depends('product_variant_id.component_type_id')
+    def _compute_component_type_id(self):
+        for record in self:
+            record.component_type_id = record.product_variant_id.component_type_id
 
+    def _inverse_component_type_id(self):
+        for record in self:
+            for product_id in record.product_variant_ids:
+                if product_id.component_type_id != record.component_type_id:
+                    product_id.write({'component_properties': False})
+                product_id.component_type_id = record.component_type_id
 
-class ProductProduct(models.Model):
-    _inherit = "product.product"
+    @api.depends('product_variant_ids.component_properties')
+    def _compute_component_properties(self):
+        for record in self:
+            record.component_properties = record.product_variant_ids[0].component_properties
 
-    direct_standard_price = fields.Float('Cost', company_dependent=True)
+    def _inverse_component_properties(self):
+        for record in self:
+            if record.product_variant_count == 1 and \
+                    record.component_properties and \
+                    record.component_properties != record.product_variant_ids[0].component_properties:
+                record.product_variant_ids[0].write({'component_properties': record.component_properties})
+
+    @api.depends('product_variant_ids.short_description')
+    def _compute_short_description(self):
+        for record in self:
+            record.short_description = record.product_variant_ids[0].short_description
+
+    def _inverse_short_description(self):
+        for record in self:
+            if record.product_variant_count == 1 and \
+                    record.short_description and \
+                    record.short_description != record.product_variant_ids[0].short_description:
+                record.product_variant_ids[0].write({'short_description': record.short_description})
+
+    def action_update_nextar_data(self):
+        for record in self:
+            for product_id in record.product_variant_ids:
+                product_id.action_update_nextar_data()
