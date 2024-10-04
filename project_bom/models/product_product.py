@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
+import logging
 
-from odoo import api, fields, models, _
+from odoo import api, fields, models, _, Command
+
+_logger = logging.getLogger(__name__)
 
 NEXAR_PART_ATTRIBUTES = """
 query specAttributes(
@@ -93,11 +96,35 @@ class ProductProduct(models.Model):
                     and record.product_tmpl_id.product_variant_count == 1:
                 record.product_tmpl_id.component_type_id = record.component_type_id
 
-    @api.onchange('component_properties')
-    def _onchange_component_properties(self):
-        for record in self:
-            if record.product_tmpl_id.product_variant_count == 1:
-                record.product_tmpl_id.component_properties = record.component_properties
+    @api.model_create_multi
+    def create(self, vals_list):
+        if not self._context.get('block_properties', False):
+            for vals in vals_list:
+                if vals.get('component_properties', False) and vals.get('product_tmpl_id', False):
+                    product_tmpl_id = self.env['product.template'].browse(vals['product_tmpl_id'])
+                    if product_tmpl_id.product_variant_count == 1:
+                        product_tmpl_id.with_context(**dict(self._context, block_properties=True)).write({
+                            'component_properties': vals['component_properties'],
+                        })
+        return super().create(vals_list)
+
+    def write(self, vals):
+        if not self._context.get('block_properties', False) and vals.get('component_properties', False):
+            product_tmpl_id = self.mapped('product_tmpl_id')
+            if product_tmpl_id.product_variant_count == 1:
+                product_tmpl_id.with_context(**dict(self._context, block_properties=True)).write({
+                    'component_properties': vals['component_properties']
+                })
+        return super().write(vals)
+
+    def _get_product_properties(self, key, value):
+        current_component_properties = {}
+        all_properties = self.read(['component_properties'])[0]['component_properties']
+        for curr in list(filter(lambda x: x['string'] == key, all_properties)):
+            current_component_properties.update({
+                curr.get('name'): value
+            })
+        return current_component_properties
 
     def action_update_nextar_data(self):
         for record in self:
@@ -120,9 +147,11 @@ class ProductProduct(models.Model):
                         for part in result.get("part",{}).get("specs",{}):
                             if part.get('attribute').get('name') == 'mpm':
                                 continue
-                            for curr in list(filter(lambda x: x['string'] == part.get('attribute').get('name'), all_properties)):
-                                current_component_properties.update({
-                                    curr.get('name'): part.get('displayValue')
-                                })
+                            current_component_properties.update(
+                                record._get_product_properties(part.get('attribute').get('name'), part.get('displayValue'))
+                            )
+                            # for curr in list(filter(lambda x: x['string'] == part.get('attribute').get('name'), all_properties)):
+                            #     current_component_properties.update({
+                            #         curr.get('name'): part.get('displayValue')
+                            #     })
                     record.component_properties = current_component_properties
-                    # record.product_tmpl_id._compute_component_properties()

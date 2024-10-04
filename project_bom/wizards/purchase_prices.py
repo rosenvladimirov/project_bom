@@ -15,7 +15,7 @@ class PurchasePrice(models.TransientModel):
     _description = "Get purchase price wizard"
 
     product_tmpl_id = fields.Many2one('product.template', 'Product template')
-    product_uom = fields.Many2one('product.uom', string='Product Unit of Measure', required=True)
+    product_uom = fields.Many2one('uom.uom', string='Product Unit of Measure', required=True)
     standard_price = fields.Float(string='Unit Price', required=True, digits=dp.get_precision('Product Price'))
     price_line = fields.One2many('bom.get.purchase.price.line', 'purchase_price_id', string='Purchase price lines')
     supp_price_line = fields.One2many('bom.get.purchase.price.supp', 'purchase_price_id', string='Supplier price lines')
@@ -110,7 +110,6 @@ class PurchasePrice(models.TransientModel):
             })
         return res
 
-    @api.multi
     def action_use_price(self):
         for record in self:
             purchase_price_id = record.price_line.filtered(lambda r: r.use_price)
@@ -166,7 +165,7 @@ class PurchasePriceLine(models.TransientModel):
     product_id = fields.Many2one('product.product', 'Product', related='purchase_line_id.product_id')
     product_tmpl_id = fields.Many2one('product.template', 'Product template',
                                       related='purchase_line_id.product_id.product_tmpl_id')
-    product_uom = fields.Many2one('product.uom', string='Product Unit of Measure',
+    product_uom = fields.Many2one('uom.uom', string='Product Unit of Measure',
                                   related='purchase_line_id.product_uom')
     price_unit = fields.Float(string='Unit Price', required=True, digits=dp.get_precision('Product Price'))
     currency_id = fields.Many2one('res.currency', 'Currency', required=True)
@@ -191,8 +190,8 @@ class PurchasePriceSupplierInfo(models.TransientModel):
     product_id = fields.Many2one('product.product', 'Product', related='supp_info_id.product_id')
     product_tmpl_id = fields.Many2one('product.template', 'Product template',
                                       related='supp_info_id.product_id.product_tmpl_id')
-    name = fields.Many2one('res.partner', 'Vendor', related='supp_info_id.name')
-    product_uom = fields.Many2one('product.uom', string='Product Unit of Measure', related='supp_info_id.product_uom')
+    name = fields.Many2one('res.partner', 'Vendor', related='supp_info_id.display_name')
+    product_uom = fields.Many2one('uom.uom', string='Product Unit of Measure', related='supp_info_id.product_uom')
     price_unit = fields.Float(string='Unit Price', required=True, digits=dp.get_precision('Product Price'))
     currency_id = fields.Many2one('res.currency', 'Currency', required=True)
     date_start = fields.Date('Start Date', related='supp_info_id.date_start', help="Start date for this vendor price")
