@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates xml:space="preserve">
+    <t t-name="pv_config.ptav-radio-extend">
+        <ul class="list-unstyled flex-grow-1 m-0">
+            <li t-foreach="this.state.headers" t-as="ptav" t-key="ptav.id"
+                class="mb-2">
+                <div class="form-check">
+                    <label
+                        class="form-check-label d-inline-flex align-items-center"
+                        t-att-class="{ 'css_not_available': ptav.excluded }"
+                        t-att-for="ptav.id">
+                        <span t-out="ptav.name"/>
+                        <BadgeExtraPrice
+                            t-if="ptav.price_extra"
+                            price="ptav.price_extra"
+                            currencyId="this.env.currencyId"/>
+                    </label>
+                    <input
+                        type="radio"
+                        class="form-check-input"
+                        t-att-id="ptav.id"
+                        t-att-value="ptav.id"
+                        t-att-checked="this.props.selected_attribute_value_ids.includes(ptav.id)"
+                        t-att-name="'ptal-' + this.props.id"
+                        t-on-change="updateSelectedPTAV"/>
+<!--                    t-att-disabled="getPTAVIsValid(ptav.id)"-->
+                </div>
+            </li>
+        </ul>
+    </t>
+</templates>

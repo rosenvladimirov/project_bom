@@ -67,6 +67,7 @@ class ProductTemplateAttributeConfig(models.Model):
                         ])
 
                         if len(header_template_value) > 0 and len(config) > 0:
+                            header_template_value[0].is_header = True
                             header_template_value[0].configuration_product_template_attribute_value = config[0]
 
                         value_template_value = self.env['product.template.attribute.value'].search([
@@ -76,6 +77,7 @@ class ProductTemplateAttributeConfig(models.Model):
                         ])
 
                         if len(value_template_value) > 0 and len(config) > 0:
+                            value_template_value[0].is_header = False
                             value_template_value[0].configuration_product_template_attribute_value = config[0]
 
     def action_configure_product_template_attributes(self):
