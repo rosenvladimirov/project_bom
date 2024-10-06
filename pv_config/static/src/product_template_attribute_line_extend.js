@@ -78,9 +78,6 @@ odoo.define('pv_config.ProductTemplateAttributeLineExtend', [
                         if (this.state.is_header && this.props.selected_attribute_value_ids.length > 0) {
                             document.selected_header_id = this.props.selected_attribute_value_ids[0];
                         }
-                        if (!this.state.is_header) {
-                            this.clearSelection();
-                        }
                         this.loadAllValues();
                     });
                 });
