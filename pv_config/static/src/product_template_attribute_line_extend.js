@@ -90,8 +90,8 @@ odoo.define('pv_config.ProductTemplateAttributeLineExtend', [
             updateSelectedPTAV(event) {
                 if (this.state.is_header) {
                     document.selected_header_id = event.target.value;
+                    this.loadAllValues();
                 }
-                this.loadAllValues();
                 return parentMethodUpdateSelectedPTAV.apply(this, arguments);
             },
             getPTAVTemplate() {
