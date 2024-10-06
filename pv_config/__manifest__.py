@@ -16,9 +16,9 @@
         'views/product_template_views.xml',
         'wizards/product_template_attribute_config_wizard.xml',
     ],
-    # 'assets': {
-    #     'web.assets_backend': [
-    #         'pv_config/static/src/**/*',
-    #     ]
-    # },
+    'assets': {
+        'web.assets_backend': [
+            'pv_config/static/src/**/*',
+        ]
+    },
 }

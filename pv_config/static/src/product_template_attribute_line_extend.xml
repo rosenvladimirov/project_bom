@@ -2,7 +2,7 @@
 <templates xml:space="preserve">
     <t t-name="pv_config.ptav-radio-extend">
         <ul class="list-unstyled flex-grow-1 m-0">
-            <li t-foreach="this.state.headers" t-as="ptav" t-key="ptav.id"
+            <li t-foreach="this.props.attribute_values" t-as="ptav" t-key="ptav.id"
                 class="mb-2">
                 <div class="form-check">
                     <label
@@ -18,12 +18,12 @@
                     <input
                         type="radio"
                         class="form-check-input"
+                        t-att-disabled="getPTAVIsInvalid(ptav.id)"
                         t-att-id="ptav.id"
                         t-att-value="ptav.id"
                         t-att-checked="this.props.selected_attribute_value_ids.includes(ptav.id)"
                         t-att-name="'ptal-' + this.props.id"
                         t-on-change="updateSelectedPTAV"/>
-<!--                    t-att-disabled="getPTAVIsValid(ptav.id)"-->
                 </div>
             </li>
         </ul>
