@@ -5,12 +5,12 @@ import {onWillStart, useState} from "@odoo/owl";
 
 odoo.define('pv_config.ProductTemplateAttributeLineExtend', [
     '@web/core/utils/patch',
-    '@sale_product_configurator/js/product_template_attribute_line/product_template_attribute_line'
+    '@sale_product_configurator/js/product_template_attribute_line/product_template_attribute_line',
+    '@sale_product_configurator/js/product_configurator_dialog/product_configurator_dialog',
 ], function (require) {
     const {patch} = require('@web/core/utils/patch');
     const ProductTemplateAttributeLine = require('@sale_product_configurator/js/product_template_attribute_line/product_template_attribute_line');
     const ProductConfiguratorDialog = require('@sale_product_configurator/js/product_configurator_dialog/product_configurator_dialog');
-    document.initialized = [];
 
     if (ProductConfiguratorDialog && ProductConfiguratorDialog.ProductConfiguratorDialog && ProductConfiguratorDialog.ProductConfiguratorDialog.prototype) {
         const parentSetup = ProductConfiguratorDialog.ProductConfiguratorDialog.prototype.setup;
