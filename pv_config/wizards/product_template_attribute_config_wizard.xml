@@ -10,7 +10,7 @@
                                field_x_axis="configuration_attribute_line_header_value"
                                field_y_axis="configuration_attribute_line_value"
                                field_value="configuration_attribute_is_valid">
-                            <tree string="Product Template Attributes">
+                            <tree string="Product Template Attributes" limit="999999">
                                 <field name="configuration_attribute_line_header_value"/>
                                 <field name="configuration_attribute_line_value"/>
                                 <field name="configuration_attribute_is_valid"/>
