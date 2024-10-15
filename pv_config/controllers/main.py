@@ -24,3 +24,13 @@ class ProductVariantConfiguratorController(Controller):
                 product_template.configuration_attribute_line_ids[0].id == ptal.id):
             return True
         return False
+
+    @route('/pv_config/get_ptal_is_line', type='json', auth='user')
+    def get_product_template_attribute_line_is_line(self, product_template_id, ptal_id):
+        ptal = request.env['product.template.attribute.line'].browse(ptal_id)
+        product_template = request.env['product.template'].browse(product_template_id)
+        if (len(product_template.configuration_attribute_line_ids) > 0 and
+                product_template.configuration_attribute_line_ids[0].id != ptal.id and
+                ptal.id in product_template.configuration_attribute_line_ids.ids):
+            return True
+        return False

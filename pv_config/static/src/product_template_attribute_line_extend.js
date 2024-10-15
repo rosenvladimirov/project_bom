@@ -36,6 +36,7 @@ odoo.define('pv_config.ProductTemplateAttributeLineExtend', [
 
                 this.state = useState({
                     is_header: false,
+                    is_line: false,
                     valid_configuration_attribute: {}
                 });
 
@@ -79,6 +80,15 @@ odoo.define('pv_config.ProductTemplateAttributeLineExtend', [
                             document.selected_header_id = this.props.selected_attribute_value_ids[0];
                         }
                         this.loadAllValues();
+                        if (this.state.is_header) {
+                            return;
+                        }
+                        this.rpc('/pv_config/get_ptal_is_line', {
+                            product_template_id: this.props.productTmplId,
+                            ptal_id: this.props.id
+                        }).then((is_line) => {
+                            this.state.is_line = is_line;
+                        });
                     });
                 });
             },
@@ -106,7 +116,13 @@ odoo.define('pv_config.ProductTemplateAttributeLineExtend', [
                     return false;
                 }
                 return this.state.valid_configuration_attribute[ptav_id] === false;
-            }
+            },
+            getPTAVConfigHeader() {
+                return this.state.is_header;
+            },
+            getPTAVConfigLine() {
+                return this.state.is_line;
+            },
         });
     }
 });
